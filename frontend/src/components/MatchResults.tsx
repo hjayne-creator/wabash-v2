@@ -38,7 +38,7 @@ export function MatchResults({ result, onDismiss }: MatchResultsProps) {
               <th>Tier</th>
               <th>Title</th>
               <th>Snippet</th>
-              <th>Score</th>
+              <th>SERP rank</th>
             </tr>
           </thead>
           <tbody>
@@ -59,7 +59,7 @@ export function MatchResults({ result, onDismiss }: MatchResultsProps) {
         </table>
       )}
 
-      <h4>Step 2 — Scrape status</h4>
+      <h4>Step 2 — Scrape &amp; prefilter</h4>
       {result.sources.length === 0 ? (
         <p className="muted small">Nothing scraped.</p>
       ) : (
@@ -68,6 +68,9 @@ export function MatchResults({ result, onDismiss }: MatchResultsProps) {
             <tr>
               <th>URL</th>
               <th>Scraped</th>
+              <th>Product page</th>
+              <th>Page score</th>
+              <th>Match score</th>
               <th>Rule MPN</th>
               <th>Rule mfg</th>
               <th>Error</th>
@@ -82,6 +85,11 @@ export function MatchResults({ result, onDismiss }: MatchResultsProps) {
                   </a>
                 </td>
                 <td>{s.scrape_ok ? "yes" : "no"}</td>
+                <td>
+                  {s.is_product_page == null ? "—" : s.is_product_page ? "yes" : "no"}
+                </td>
+                <td>{s.product_page_score ?? "—"}</td>
+                <td>{s.product_match_score ?? "—"}</td>
                 <td>{s.rule_mpn_found ? "yes" : "no"}</td>
                 <td>{s.rule_manufacturer_match ? "yes" : "no"}</td>
                 <td>{s.scrape_error || "—"}</td>

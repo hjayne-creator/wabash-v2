@@ -237,7 +237,11 @@ async def _prefilter_candidates(
             authorized_domains=authorized_domains,
         )
         if scrape_ok and markdown:
-            product_page_score, is_product_page, product_page_signals = compute_product_page_score(markdown)
+            product_page_score, is_product_page, product_page_signals = compute_product_page_score(
+                markdown,
+                manufacturer=manufacturer,
+                mpn=mpn,
+            )
             product_match_score = compute_product_match_score(
                 markdown,
                 manufacturer=manufacturer,

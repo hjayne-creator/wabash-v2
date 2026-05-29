@@ -167,8 +167,17 @@ def product_page_signals(text: str) -> tuple[list[str], int]:
     return matched, min(total, 100)
 
 
-def compute_product_page_score(text: str) -> tuple[int, bool, list[str]]:
+def compute_product_page_score(
+    text: str,
+    *,
+    manufacturer: str = "",
+    mpn: str = "",
+) -> tuple[int, bool, list[str]]:
     signals, score = product_page_signals(text)
+    if manufacturer and mpn and exact_mpn_in_text(text, mpn) and manufacturer_matches(text, manufacturer):
+        if "target_product_evidence" not in signals:
+            signals = [*signals, "target_product_evidence"]
+        score = min(100, score + 40)
     # A medium threshold keeps recall while filtering obvious non-product pages.
     return score, score >= 35, signals
 

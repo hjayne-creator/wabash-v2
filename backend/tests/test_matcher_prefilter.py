@@ -33,3 +33,19 @@ def test_compute_product_match_score_rewards_exact_evidence():
         tier=SOURCE_TIER_MANUFACTURER_PAGE,
     )
     assert score >= 90
+
+
+def test_compute_product_page_score_boosts_when_target_mpn_and_mfg_present():
+    text = """
+    PEWAG H4247SC
+    Manufacturer: PEWAG
+    In stock. SKU 3942092.
+    """
+    score, is_product_page, signals = compute_product_page_score(
+        text,
+        manufacturer="PEWAG",
+        mpn="H4247SC",
+    )
+    assert is_product_page is True
+    assert score >= 35
+    assert "target_product_evidence" in signals

@@ -56,6 +56,10 @@ export type ScoredSource = {
   tier: string;
   scrape_ok: boolean;
   scrape_error?: string | null;
+  is_product_page?: boolean | null;
+  product_page_score?: number | null;
+  product_match_score?: number | null;
+  product_page_signals?: string[];
   markdown_excerpt: string;
   rule_mpn_found: boolean;
   rule_manufacturer_match: boolean;

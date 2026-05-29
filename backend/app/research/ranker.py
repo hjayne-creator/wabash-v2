@@ -34,7 +34,7 @@ MATCH_TRUSTED_TIERS = frozenset(
     }
 )
 
-SCRAPE_SKIP_TIERS = frozenset({SOURCE_TIER_OTHER, SOURCE_TIER_LISTING_PAGE})
+SCRAPE_SKIP_TIERS = frozenset({SOURCE_TIER_LISTING_PAGE})
 
 _LISTING_PATH_MARKERS = (
     "/search",
@@ -100,6 +100,11 @@ def looks_like_listing_page(result: OrganicResult) -> bool:
     return False
 
 
+def _looks_like_product_detail_path(path: str) -> bool:
+    lowered = (path or "").lower()
+    return "/products/" in lowered or "/product/" in lowered
+
+
 def classify_result(
     result: OrganicResult,
     *,
@@ -111,29 +116,36 @@ def classify_result(
 
     host = host_from_url(result.url)
     host_key = host[4:] if host.startswith("www.") else host
+    path = (urlparse(result.url).path or "").lower()
     mfg_tokens = manufacturer_host_tokens(manufacturer)
     title_snippet = f"{result.title} {result.snippet}".lower()
 
     host_has_mfg = any(token in host_key for token in mfg_tokens)
     title_has_mfg = any(token in title_snippet for token in mfg_tokens)
-    if host_has_mfg or title_has_mfg:
-        if _looks_like_pdf(result.url, result.title, result.snippet):
-            if pdf_host_is_trusted(
-                result.url,
-                manufacturer=manufacturer,
-                authorized_domains=authorized_domains,
-            ):
-                return SOURCE_TIER_DATASHEET, 100.0
-            return SOURCE_TIER_OTHER, 25.0
-        if host_has_mfg:
-            return SOURCE_TIER_MANUFACTURER_PAGE, 90.0
-        return SOURCE_TIER_OTHER, 35.0
+
+    if _looks_like_pdf(result.url, result.title, result.snippet):
+        if pdf_host_is_trusted(
+            result.url,
+            manufacturer=manufacturer,
+            authorized_domains=authorized_domains,
+        ):
+            return SOURCE_TIER_DATASHEET, 100.0
+        return SOURCE_TIER_OTHER, 25.0
+
+    if host_has_mfg:
+        return SOURCE_TIER_MANUFACTURER_PAGE, 90.0
 
     if normalized_host_matches_allowlist(host_key, authorized_domains):
         return SOURCE_TIER_AUTHORIZED_DISTRIBUTOR, 70.0
 
     if any(token in title_snippet for token in ("buy", "shop", "price", "in stock", "add to cart")):
         return SOURCE_TIER_ECOMMERCE, 50.0
+
+    if _looks_like_product_detail_path(path):
+        return SOURCE_TIER_ECOMMERCE, 45.0
+
+    if title_has_mfg:
+        return SOURCE_TIER_OTHER, 35.0
 
     return SOURCE_TIER_OTHER, 30.0
 
