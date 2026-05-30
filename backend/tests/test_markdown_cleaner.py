@@ -80,3 +80,63 @@ def test_normalized_mpn_in_body_ignores_url_slug_only_hits():
     assert not normalized_mpn_in_body(nav_only, "H4247SC")
     assert not exact_mpn_in_body(nav_only, "H4247SC")
     assert normalized_mpn_in_body(body_hit, "H4247SC")
+
+
+def test_clean_pdp_markdown_strips_store_locator_and_account_nav():
+    raw = _scrape_from_example("example5.md")
+
+    cleaned = clean_pdp_markdown(raw)
+
+    assert "Find Other Stores" not in cleaned
+    assert "POPULAR SEARCHES" not in cleaned
+    assert "Parts Finder" not in cleaned
+    assert "24.1 miles" not in cleaned
+    assert "H4247SC" in cleaned
+    assert "PEWAG" in cleaned
+    assert cleaned.count("PEWAG INC Tire Chains") <= 2
+
+
+def test_clean_pdp_markdown_strips_reviews_and_qa_sections():
+    raw = _scrape_from_example("example6.md")
+
+    cleaned = clean_pdp_markdown(raw)
+
+    assert "Customer Reviews" not in cleaned
+    assert "Questions & Answers" not in cleaned
+    assert "Write a Review" not in cleaned
+    assert "Prop 65 Warning" not in cleaned
+    assert "H4247SC" in cleaned
+    assert "Part Description" in cleaned
+    assert "PEWAG CHAINS" in cleaned
+
+
+def test_product_focused_excerpt_example5_starts_near_product_block():
+    raw = _scrape_from_example("example5.md")
+    cleaned = clean_pdp_markdown(raw)
+
+    excerpt = product_focused_excerpt(
+        cleaned,
+        mpn="H4247SC",
+        manufacturer="PEWAG",
+        max_chars=2_000,
+    )
+
+    assert excerpt.index("H4247SC") < 300
+    assert "Find Other Stores" not in excerpt
+    assert "Parts Finder" not in excerpt
+
+
+def test_product_focused_excerpt_example6_keeps_description_only():
+    raw = _scrape_from_example("example6.md")
+    cleaned = clean_pdp_markdown(raw)
+
+    excerpt = product_focused_excerpt(
+        cleaned,
+        mpn="H4247SC",
+        manufacturer="PEWAG CHAINS",
+        max_chars=2_000,
+    )
+
+    assert "Part Description" in excerpt
+    assert "Customer Reviews" not in excerpt
+    assert "reCAPTCHA" not in excerpt

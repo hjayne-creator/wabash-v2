@@ -269,6 +269,21 @@ async def _prefilter_candidates(
     return evaluations
 
 
+def _pick_best_for_llm_scoring(evaluations: list[PrefilterEvaluation]) -> PrefilterEvaluation | None:
+    """Return the single best scraped candidate for LLM match scoring."""
+    scraped = [ev for ev in evaluations if ev.scrape_ok and ev.markdown]
+    if not scraped:
+        return None
+    return max(
+        scraped,
+        key=lambda ev: (
+            ev.product_match_score or 0,
+            ev.product_page_score or 0,
+            ev.candidate.score,
+        ),
+    )
+
+
 async def run_product_match(
     *,
     manufacturer_name: str,
@@ -347,6 +362,8 @@ async def run_product_match(
 
     sources: list[ScoredSource] = []
     scrape_failures = 0
+    llm_scoring_target = _pick_best_for_llm_scoring(selected)
+    llm_scoring_url = llm_scoring_target.candidate.result.url if llm_scoring_target else None
 
     for candidate in [ev.candidate for ev in selected]:
         pre = selected_by_url[candidate.result.url]
@@ -370,7 +387,7 @@ async def run_product_match(
         criteria: list[MatchCriterion] = []
         score_error: str | None = None
 
-        if scrape_ok and markdown:
+        if scrape_ok and markdown and candidate.result.url == llm_scoring_url:
             overall_pct, raw_criteria, score_error = await score_source_match(
                 manufacturer=manufacturer,
                 mpn=mpn,

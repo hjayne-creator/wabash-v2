@@ -2,6 +2,7 @@ import asyncio
 
 from app.adapters.serpapi_client import OrganicResult
 from app.research import searcher
+from app.research.ranker import RankedCandidate
 
 
 def test_apply_match_floor_skips_non_product_pages():
@@ -65,6 +66,105 @@ def _restore_prefilter_settings(previous: dict[str, int]) -> None:
     settings = searcher.get_settings()
     for key, value in previous.items():
         setattr(settings, key, value)
+
+
+def test_pick_best_for_llm_scoring_prefers_match_then_page_score():
+    def _ev(match: int, page: int, url: str) -> searcher.PrefilterEvaluation:
+        return searcher.PrefilterEvaluation(
+            candidate=RankedCandidate(
+                result=OrganicResult(
+                    position=1,
+                    title=url,
+                    url=url,
+                    snippet="",
+                    domain="example.com",
+                ),
+                tier="other",
+                score=10.0,
+            ),
+            markdown="content",
+            scrape_ok=True,
+            scrape_error=None,
+            is_product_page=True,
+            product_page_score=page,
+            product_match_score=match,
+            product_page_signals=[],
+        )
+
+    best = searcher._pick_best_for_llm_scoring(
+        [
+            _ev(60, 90, "https://example.com/a"),
+            _ev(75, 40, "https://example.com/b"),
+            _ev(75, 55, "https://example.com/c"),
+        ]
+    )
+    assert best is not None
+    assert best.candidate.result.url == "https://example.com/c"
+
+
+def test_run_product_match_llm_scores_only_best_prefilter_candidate(monkeypatch):
+    previous = _set_prefilter_settings(top_n=5, page_min=35, match_min=60, fallback_n=2)
+    scored_urls: list[str] = []
+
+    async def fake_run_serp_queries(_serp, _queries, *, blocked_keys):
+        del blocked_keys
+        return [
+            OrganicResult(
+                position=i + 1,
+                title=f"ACME X-100 Result {i + 1}",
+                url=f"https://example{i + 1}.com/product/x-100",
+                snippet="technical specifications part number x-100",
+                domain=f"example{i + 1}.com",
+            )
+            for i in range(3)
+        ]
+
+    async def fake_prefilter_candidates(ranked, **kwargs):
+        del kwargs
+        scores = [42, 88, 70]
+        page_scores = [45, 50, 80]
+        out = []
+        for idx, candidate in enumerate(ranked):
+            out.append(
+                searcher.PrefilterEvaluation(
+                    candidate=candidate,
+                    markdown="ACME X-100 page",
+                    scrape_ok=True,
+                    scrape_error=None,
+                    is_product_page=True,
+                    product_page_score=page_scores[idx],
+                    product_match_score=scores[idx],
+                    product_page_signals=["part_number"],
+                )
+            )
+        return out
+
+    async def fake_score_source_match(**kwargs):
+        scored_urls.append(kwargs["url"])
+        return 88, [], None
+
+    monkeypatch.setattr(searcher, "_load_domain_sets", lambda: (frozenset(), frozenset()))
+    monkeypatch.setattr(searcher, "_run_serp_queries", fake_run_serp_queries)
+    monkeypatch.setattr(searcher, "_prefilter_candidates", fake_prefilter_candidates)
+    monkeypatch.setattr(searcher, "score_source_match", fake_score_source_match)
+
+    try:
+        bundle = asyncio.run(
+            searcher.run_product_match(
+                manufacturer_name="ACME",
+                manufacturer_product_number="X-100",
+            )
+        )
+    finally:
+        _restore_prefilter_settings(previous)
+
+    assert scored_urls == ["https://example2.com/product/x-100"]
+    scored = [s for s in bundle.sources if s.overall_similarity_pct is not None]
+    unscored = [s for s in bundle.sources if s.overall_similarity_pct is None]
+    assert len(bundle.sources) == 2
+    assert len(scored) == 1
+    assert len(unscored) == 1
+    assert scored[0].url == "https://example2.com/product/x-100"
 
 
 def test_run_product_match_prefilter_scrapes_top_five(monkeypatch):
