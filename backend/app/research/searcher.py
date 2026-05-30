@@ -26,8 +26,8 @@ from app.research.ranker import (
     SOURCE_TIER_MANUFACTURER_PAGE,
     rank_results,
 )
+from app.research.markdown_cleaner import process_scraped_markdown, product_focused_excerpt
 from app.research.scrape_limits import (
-    cap_scraped_markdown,
     pdf_host_is_trusted,
     remote_pdf_byte_size,
 )
@@ -177,7 +177,7 @@ async def _scrape_candidate(
         log_external_cost(
             service="firecrawl", phase="scrape", units=1, unit_cost_usd=settings.firecrawl_cost_usd
         )
-        markdown = cap_scraped_markdown(FirecrawlClient.extract_markdown(response), url, settings)
+        markdown = process_scraped_markdown(FirecrawlClient.extract_markdown(response), url, settings)
         if not markdown:
             return "", False, "Firecrawl returned empty content."
         if not is_pdf_url(url) and _scrape_needs_retry(markdown=markdown, manufacturer=manufacturer, mpn=mpn):
@@ -194,7 +194,7 @@ async def _scrape_candidate(
                     units=1,
                     unit_cost_usd=settings.firecrawl_cost_usd,
                 )
-                retry_markdown = cap_scraped_markdown(
+                retry_markdown = process_scraped_markdown(
                     FirecrawlClient.extract_markdown(retry_response),
                     url,
                     settings,
@@ -412,7 +412,16 @@ async def run_product_match(
                 product_page_score=pre.product_page_score,
                 product_match_score=pre.product_match_score,
                 product_page_signals=pre.product_page_signals,
-                markdown_excerpt=markdown[:excerpt_limit] if markdown else "",
+                markdown_excerpt=(
+                    product_focused_excerpt(
+                        markdown,
+                        mpn=mpn,
+                        manufacturer=manufacturer,
+                        max_chars=excerpt_limit,
+                    )
+                    if markdown
+                    else ""
+                ),
                 rule_mpn_found=rule_mpn,
                 rule_manufacturer_match=rule_mfg,
                 overall_similarity_pct=overall_pct,

@@ -7,6 +7,7 @@ import re
 from pydantic import BaseModel, Field, ValidationError
 
 from app.config import get_settings
+from app.research.markdown_cleaner import product_focused_excerpt
 from app.observability.run_usage import llm_step_context
 from app.workflow.llm_router import LLMClientError, complete_text, provider_for_model
 
@@ -78,7 +79,12 @@ async def score_source_match(
     settings = get_settings()
     model = settings.wabash_match_model
     provider = provider_for_model(model)
-    excerpt = markdown[: settings.wabash_scorer_max_chars]
+    excerpt = product_focused_excerpt(
+        markdown,
+        mpn=mpn,
+        manufacturer=manufacturer,
+        max_chars=settings.wabash_scorer_max_chars,
+    )
 
     weak_title = serp_title[:160]
     weak_snippet = serp_snippet[:220]

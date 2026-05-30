@@ -72,17 +72,73 @@ def manufacturer_matches(source_text: str, manufacturer: str, *, threshold: floa
     return SequenceMatcher(None, norm_target, norm_source).ratio() >= threshold
 
 
-def exact_mpn_in_text(text: str, mpn: str) -> bool:
+_MPN_BODY_LINK = re.compile(r"\[([^\]]*)\]\((?:[^)(]|\([^)]*\))*\)")
+_MPN_BODY_BARE_URL = re.compile(r"https?://\S+")
+_MPN_BODY_PRODUCT_MARKERS = (
+    "part number",
+    "part #",
+    "part:",
+    "mpn",
+    "manufacturer part",
+    "brand:",
+    "specifications",
+    "technical specifications",
+    "vmrs",
+    "model number",
+    "sku",
+    "upc",
+)
+
+
+def _strip_links_for_mpn_scan(line: str) -> str:
+    text = _MPN_BODY_LINK.sub(lambda match: match.group(1).strip(), line)
+    return _MPN_BODY_BARE_URL.sub("", text).strip()
+
+
+def _text_without_urls(text: str) -> str:
+    return _MPN_BODY_BARE_URL.sub(" ", text[:_MATCH_SCAN_LIMIT])
+
+
+def _line_has_mpn_product_marker(line: str) -> bool:
+    lower = line.lower()
+    return any(marker in lower for marker in _MPN_BODY_PRODUCT_MARKERS)
+
+
+def exact_mpn_in_body(text: str, mpn: str) -> bool:
+    """True when MPN appears in visible body text, not only in link labels or URLs."""
     target = normalize_mpn(mpn)
-    if not target:
+    part = mpn.strip()
+    if not target or not part:
         return False
-    compact = normalize_mpn(text[:_MATCH_SCAN_LIMIT])
-    if target in compact:
-        return True
-    pattern = re.escape(mpn.strip())
-    if pattern and re.search(pattern, text[:_MATCH_SCAN_LIMIT], flags=re.IGNORECASE):
-        return True
+
+    for line in text.splitlines():
+        raw = line.strip()
+        if not raw:
+            continue
+        visible = _strip_links_for_mpn_scan(line)
+        if target not in normalize_mpn(visible):
+            continue
+        if _line_has_mpn_product_marker(raw) or _line_has_mpn_product_marker(visible):
+            return True
+        if re.fullmatch(rf"{re.escape(part)}", visible.strip(), re.IGNORECASE):
+            return True
+        if re.search(rf"(?:part|mpn|sku|model)\s*[:#]?\s*{re.escape(part)}", visible, re.IGNORECASE):
+            return True
+        if _MPN_BODY_LINK.fullmatch(raw) and not _line_has_mpn_product_marker(visible):
+            continue
+        if re.search(rf"\b{re.escape(part)}\b", visible, re.IGNORECASE):
+            return True
+
+    stripped = text.strip()
+    if "\n" not in stripped and not _MPN_BODY_LINK.search(stripped):
+        visible = _strip_links_for_mpn_scan(_text_without_urls(stripped))
+        if re.search(rf"\b{re.escape(part)}\b", visible, re.IGNORECASE):
+            return True
     return False
+
+
+def exact_mpn_in_text(text: str, mpn: str) -> bool:
+    return exact_mpn_in_body(text, mpn)
 
 
 def family_hint_in_text(text: str, family_hint: str) -> bool:
@@ -103,7 +159,7 @@ def mpn_and_manufacturer_cooccur(text: str, manufacturer: str, mpn: str) -> bool
     if not exact_mpn_in_text(text, mpn):
         return False
 
-    scan = text[:_MATCH_SCAN_LIMIT]
+    scan = _text_without_urls(text)
     pattern = re.compile(re.escape(mpn.strip()), flags=re.IGNORECASE)
     for match in pattern.finditer(scan):
         start = max(0, match.start() - _COLOCATE_WINDOW)
