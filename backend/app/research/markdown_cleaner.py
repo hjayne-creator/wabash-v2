@@ -25,6 +25,29 @@ _NOISE_SECTION_PHRASES = (
     "ask a question",
     "review guidelines",
     "prop 65 warning",
+    "about us",
+    "my account",
+    "quick links",
+    "contacts",
+    "ask an expert",
+    "ask one of our experts",
+)
+
+_QTY_SELECTOR_BLOB = re.compile(r"^\d{30,}$")
+_DIGIT_HEAVY_LINE = re.compile(r"^[\d\s]{40,}$")
+_STREET_ADDRESS = re.compile(
+    r"^\d+\s+[A-Za-z0-9].*(?:Street|St\.?|Drive|Dr\.?|Avenue|Ave\.?|Road|Rd\.?|Blvd\.?|Lane|Ln\.?|Way|Court|Ct\.?)\b",
+    re.IGNORECASE,
+)
+_CITY_STATE_ZIP = re.compile(r"^[A-Za-z .'-]+,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?$")
+_QUOTE_FORM_HINTS = (
+    "cannot guarantee fitment",
+    "mailing address and phone number when submitting",
+    "submitting a quote request",
+)
+_BROKEN_MARKDOWN_FRAGMENT = re.compile(
+    r"(?:^\\+$|\\\\|\]\($|Ask one of our experts\]\(|Do you have a question about this product)",
+    re.IGNORECASE,
 )
 
 _IMG_LINE = re.compile(r"^\s*!\[[^\]]*\]\([^)]*\)\s*$")
@@ -46,6 +69,9 @@ _PRODUCT_MARKERS = (
     "sku",
     "upc",
     "msrp:",
+    "unit of measurement",
+    "pkg. dimensions",
+    "dimensions",
 )
 
 _BOILERPLATE_LINE = re.compile(
@@ -114,7 +140,20 @@ _BOILERPLATE_LINE = re.compile(
     r"minus-plus|"
     r"orders placed over the weekend|"
     r"^Not available$|"
-    r"^Available$"
+    r"^Available$|"
+    r"^Submit$|"
+    r"^reCAPTCHA$|"
+    r"I'm not a robot|"
+    r"Your Name|"
+    r"Enter your email|"
+    r"cannot guarantee fitment|"
+    r"quote request|"
+    r"Read More|"
+    r"Toll Free:|"
+    r"^Fax:|"
+    r"^##\s+(?:Price|QTY|Quantity)\s*$|"
+    r"Do you have a question about this product|"
+    r"Ask one of our experts"
     r")\b",
     re.IGNORECASE,
 )
@@ -161,11 +200,31 @@ def _line_looks_like_product_content(line: str) -> bool:
     return False
 
 
+def _is_qty_selector_blob(line: str) -> bool:
+    plain = line.strip()
+    if len(plain) < 30:
+        return False
+    if _QTY_SELECTOR_BLOB.match(plain) or _DIGIT_HEAVY_LINE.match(plain):
+        return True
+    digit_count = sum(character.isdigit() for character in plain)
+    return digit_count / len(plain) > 0.85
+
+
 def _should_drop_line(line: str) -> bool:
     stripped = line.strip()
     if not stripped:
         return False
     plain = re.sub(r"\*\*([^*]+)\*\*", r"\1", stripped)
+    if _is_qty_selector_blob(plain):
+        return True
+    if any(hint in plain.lower() for hint in _QUOTE_FORM_HINTS):
+        return True
+    if _BROKEN_MARKDOWN_FRAGMENT.search(plain):
+        return True
+    if _STREET_ADDRESS.match(plain) or _CITY_STATE_ZIP.match(plain):
+        return True
+    if re.match(r"^##\s+(?:Price|QTY|Quantity)\s*$", stripped, re.IGNORECASE):
+        return True
     if _BOILERPLATE_LINE.search(plain):
         return True
     if _STORE_DISTANCE.match(plain):

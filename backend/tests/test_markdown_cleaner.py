@@ -140,3 +140,41 @@ def test_product_focused_excerpt_example6_keeps_description_only():
     assert "Part Description" in excerpt
     assert "Customer Reviews" not in excerpt
     assert "reCAPTCHA" not in excerpt
+
+
+def test_clean_pdp_markdown_example7_strips_qty_blob_quote_form_and_footer():
+    raw = _scrape_from_example("example7.md")
+
+    cleaned = clean_pdp_markdown(raw)
+
+    assert "123456789101112" not in cleaned
+    assert "## QTY" not in cleaned
+    assert "About Us" not in cleaned
+    assert "My Account" not in cleaned
+    assert "Quick Links" not in cleaned
+    assert "reCAPTCHA" not in cleaned
+    assert "Your Name" not in cleaned
+    assert "Toll Free" not in cleaned
+    assert "Do you have a question" not in cleaned
+    assert "cannot guarantee fitment" not in cleaned
+    assert "T5566" in cleaned
+    assert "Part Number" in cleaned
+    assert "Pkg. Dimensions" in cleaned
+    assert "Unit of Measurement" in cleaned
+    assert len(cleaned) < 400
+
+
+def test_product_focused_excerpt_example7_keeps_specs():
+    raw = _scrape_from_example("example7.md")
+    cleaned = clean_pdp_markdown(raw)
+
+    excerpt = product_focused_excerpt(
+        cleaned,
+        mpn="T5566",
+        manufacturer="Reyco",
+        max_chars=2_000,
+    )
+
+    assert "T5566" in excerpt
+    assert "Pkg. Dimensions" in excerpt
+    assert "123456789101112" not in excerpt
