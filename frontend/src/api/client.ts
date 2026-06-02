@@ -20,6 +20,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new Error(detail || `Request failed (${res.status})`);
   }
+  if (res.status === 204) {
+    return undefined as T;
+  }
   return res.json() as Promise<T>;
 }
 
@@ -32,53 +35,73 @@ export type CostLine = {
 
 export type RuntimeLine = { phase: string; duration_ms: number };
 
-export type CandidateRecord = {
-  rank: number;
-  url: string;
-  title: string;
-  snippet: string;
-  domain: string;
-  tier: string;
-  serp_score: number;
+export type ResearchEngine = {
+  provider: "perplexity" | "parallel";
+  model: string;
+  display_name: string;
+  description: string;
+  is_default: boolean;
 };
 
-export type MatchCriterion = {
-  name: string;
-  score_pct: number;
-  rationale: string;
+export type MappedAttribute = {
+  key: string;
+  label: string;
+  value: string;
+  confidence: "exact" | "alias" | "fuzzy";
+  source_key: string;
 };
 
-export type ScoredSource = {
-  url: string;
-  title: string;
-  snippet: string;
-  domain: string;
-  tier: string;
-  scrape_ok: boolean;
-  scrape_error?: string | null;
-  is_product_page?: boolean | null;
-  product_page_score?: number | null;
-  product_match_score?: number | null;
-  product_page_signals?: string[];
-  markdown_excerpt: string;
-  rule_mpn_found: boolean;
-  rule_manufacturer_match: boolean;
-  overall_similarity_pct: number | null;
-  criteria: MatchCriterion[];
-  score_error?: string | null;
-};
-
-export type MatchRunResponse = {
-  status: "complete" | "partial" | "no_candidates";
+export type ResearchRunResponse = {
+  id: number;
+  status: "complete" | "partial" | "no_product" | "error";
   message?: string | null;
   manufacturer_name: string;
   manufacturer_product_number: string;
-  candidates: CandidateRecord[];
-  sources: ScoredSource[];
+  engine_provider: string;
+  engine_model: string;
+  product_found: boolean;
+  raw_output: Record<string, unknown>;
+  mapped: Record<string, MappedAttribute>;
+  unmapped_from_llm: Record<string, string>;
+  missing: string[];
+  fill_pct: number;
+  attributes_filled: number;
+  attributes_total: number;
+  sources: { url: string; title: string }[];
   cost_lines: CostLine[];
   total_cost_usd: number;
   runtime_lines: RuntimeLine[];
   total_runtime_ms: number;
+  error_message?: string | null;
+};
+
+export type ResearchRunSummary = {
+  id: number;
+  created_at: string;
+  manufacturer_name: string;
+  manufacturer_product_number: string;
+  engine_provider: string;
+  engine_model: string;
+  status: string;
+  fill_pct: number;
+  attributes_filled: number;
+  attributes_total: number;
+  total_cost_usd: number;
+  runtime_ms: number;
+  message?: string | null;
+  error_message?: string | null;
+};
+
+export type ProductAttribute = {
+  id: number;
+  key: string;
+  label: string;
+  aliases: string[];
+  hint?: string | null;
+  sort_order: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 export const api = {
@@ -87,6 +110,28 @@ export const api = {
   login: (body: { username: string; password: string }) =>
     request<{ ok: boolean; username: string }>("/auth/login", { method: "POST", body: JSON.stringify(body) }),
   logout: () => request<{ ok: boolean }>("/auth/logout", { method: "POST" }),
-  runMatch: (body: { manufacturer_name: string; manufacturer_product_number: string }) =>
-    request<MatchRunResponse>("/match/run", { method: "POST", body: JSON.stringify(body) }),
+  getResearchEngines: () => request<ResearchEngine[]>("/research/engines"),
+  runResearch: (body: {
+    manufacturer_name: string;
+    manufacturer_product_number: string;
+    engine_provider: "perplexity" | "parallel";
+    engine_model: string;
+  }) => request<ResearchRunResponse>("/research/run", { method: "POST", body: JSON.stringify(body) }),
+  listResearchRuns: (limit = 50) => request<ResearchRunSummary[]>(`/research/runs?limit=${limit}`),
+  getResearchRun: (id: number) => request<ResearchRunResponse>(`/research/runs/${id}`),
+  listAttributes: (includeInactive = true) =>
+    request<ProductAttribute[]>(`/admin/attributes?include_inactive=${includeInactive}`),
+  createAttribute: (body: {
+    key: string;
+    label: string;
+    aliases?: string[];
+    hint?: string | null;
+    sort_order?: number;
+    active?: boolean;
+  }) => request<ProductAttribute>("/admin/attributes", { method: "POST", body: JSON.stringify(body) }),
+  updateAttribute: (
+    id: number,
+    body: Partial<{ label: string; aliases: string[]; hint: string | null; sort_order: number; active: boolean }>
+  ) => request<ProductAttribute>(`/admin/attributes/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteAttribute: (id: number) => request<void>(`/admin/attributes/${id}`, { method: "DELETE" }),
 };

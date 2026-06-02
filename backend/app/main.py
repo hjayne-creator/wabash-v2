@@ -6,14 +6,14 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import auth, match
+from app.api import admin_attributes, auth, research
 from app.api.auth import SESSION_COOKIE_NAME, is_auth_enabled, verify_session_token
 from app.config import get_settings
 from app.models.db import init_db
 
 settings_cfg = get_settings()
 
-app = FastAPI(title="Wabash Product Match POC", version="0.1.0")
+app = FastAPI(title="Wabash V2 Attribute Research", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,10 +28,10 @@ app.add_middleware(
 async def _startup() -> None:
     init_db()
     log = logging.getLogger(__name__)
-    if not settings_cfg.serpapi_api_key:
-        log.warning("SERPAPI_API_KEY is not set. %s", settings_cfg.missing_api_key_hint("SERPAPI_API_KEY"))
-    if not settings_cfg.firecrawl_api_key:
-        log.warning("FIRECRAWL_API_KEY is not set. %s", settings_cfg.missing_api_key_hint("FIRECRAWL_API_KEY"))
+    if not settings_cfg.perplexity_api_key:
+        log.warning("PERPLEXITY_API_KEY is not set. %s", settings_cfg.missing_api_key_hint("PERPLEXITY_API_KEY"))
+    if not settings_cfg.parallel_api_key:
+        log.warning("PARALLEL_API_KEY is not set. %s", settings_cfg.missing_api_key_hint("PARALLEL_API_KEY"))
 
 
 @app.get("/health")
@@ -55,4 +55,5 @@ async def require_auth(request: Request, call_next):
 
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(match.router, prefix="/match", tags=["match"])
+app.include_router(research.router, prefix="/research", tags=["research"])
+app.include_router(admin_attributes.router, prefix="/admin/attributes", tags=["admin-attributes"])

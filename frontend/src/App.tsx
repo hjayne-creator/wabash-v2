@@ -1,6 +1,10 @@
 import { FormEvent, useEffect, useState } from "react";
 import { api } from "./api/client";
-import { MatchPage } from "./pages/Match";
+import { AttributesPage } from "./pages/Attributes";
+import { ReportsPage } from "./pages/Reports";
+import { ResearchPage } from "./pages/Research";
+
+type Page = "research" | "reports" | "attributes";
 
 function LoginScreen({ onLoggedIn }: { onLoggedIn: (username: string | null) => void }) {
   const [username, setUsername] = useState("");
@@ -63,6 +67,7 @@ export default function App() {
   const [authEnabled, setAuthEnabled] = useState(false);
   const [authenticated, setAuthenticated] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
+  const [page, setPage] = useState<Page>("research");
 
   useEffect(() => {
     let mounted = true;
@@ -127,32 +132,38 @@ export default function App() {
   return (
     <div className="app">
       <aside className="sidebar">
-        <h1 className="brand">Wabash</h1>
-        <p className="muted small">Product Match POC</p>
+        <h1 className="brand">Wabash V2</h1>
+        <p className="muted small">Attribute Research</p>
         <p className="muted small">{username ? `Signed in as ${username}` : "Internal tool"}</p>
+        <nav className="sidebar-nav">
+          <button
+            type="button"
+            className={page === "research" ? "nav-active" : "nav-link"}
+            onClick={() => setPage("research")}
+          >
+            Research
+          </button>
+          <button
+            type="button"
+            className={page === "reports" ? "nav-active" : "nav-link"}
+            onClick={() => setPage("reports")}
+          >
+            Reports
+          </button>
+          <button
+            type="button"
+            className={page === "attributes" ? "nav-active" : "nav-link"}
+            onClick={() => setPage("attributes")}
+          >
+            Attributes
+          </button>
+        </nav>
         <details className="sidebar-about">
           <summary>How this works</summary>
           <div className="sidebar-about-body text-light-med">
-            <p className="sidebar-about-label">The flow</p>
-            <ol>
-              <li>Enter the manufacturer name and product number, then run a search.</li>
-              <li>We look across the web for pages that look like a single product—not catalogs or search results.</li>
-              <li>Promising pages are opened and read so we can see titles, descriptions, and specifications.</li>
-              <li>Each page gets a similarity score showing how closely it matches what you entered.</li>
-            </ol>
-            <p className="sidebar-about-label">How matching works</p>
             <p>
-              We favor official manufacturer sites, datasheets, known distributors, and Wabash’s own catalog when
-              ranking results. Category pages, shop-all listings, and generic search results are set aside.
-            </p>
-            <p>
-              A strong match usually means the same part number appears on the page and the brand name lines up with
-              yours. Pages that read like a real product detail—with specs, part numbers, or a datasheet—score higher
-              than vague or unrelated pages.
-            </p>
-            <p>
-              The overall percentage is a quick read: higher means the page is more likely the same product you’re
-              looking for. Open a result to see how it scored on manufacturer, part number, title, and other details.
+              Enter a manufacturer and MPN, pick a web-research engine (Perplexity or Parallel), and run a single
+              research pass. Results are mapped to your attribute catalog with deterministic matching.
             </p>
           </div>
         </details>
@@ -165,7 +176,9 @@ export default function App() {
         ) : null}
       </aside>
       <main className="main">
-        <MatchPage />
+        {page === "research" ? <ResearchPage /> : null}
+        {page === "reports" ? <ReportsPage /> : null}
+        {page === "attributes" ? <AttributesPage /> : null}
       </main>
     </div>
   );

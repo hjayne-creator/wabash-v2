@@ -25,10 +25,8 @@ class Settings(BaseSettings):
     )
 
     openai_api_key: str | None = None
-    anthropic_api_key: str | None = None
-    xai_api_key: str | None = None
-    serpapi_api_key: str | None = None
-    firecrawl_api_key: str | None = None
+    perplexity_api_key: str | None = None
+    parallel_api_key: str | None = None
 
     @staticmethod
     def _coerce_blank_api_key(value: object) -> object:
@@ -38,24 +36,12 @@ class Settings(BaseSettings):
             return None
         return value
 
-    @field_validator(
-        "openai_api_key",
-        "anthropic_api_key",
-        "xai_api_key",
-        "serpapi_api_key",
-        "firecrawl_api_key",
-        mode="before",
-    )
+    @field_validator("openai_api_key", "perplexity_api_key", "parallel_api_key", mode="before")
     @classmethod
     def _normalize_api_keys(cls, value: object) -> object:
         return cls._coerce_blank_api_key(value)
 
-    firecrawl_wait_for_ms: int | None = Field(default=None, ge=0)
-    firecrawl_timeout_ms: int = Field(default=120_000, ge=5_000)
-    firecrawl_pdf_timeout_ms: int = Field(default=300_000, ge=10_000)
-    firecrawl_pdf_retry_timeout_ms: int = Field(default=600_000, ge=10_000)
-
-    database_url: str = "sqlite:///./wabash.db"
+    database_url: str = "sqlite:///./wabash_v2.db"
     app_host: str = Field(default="0.0.0.0", validation_alias=AliasChoices("APP_HOST", "HOST"))
     app_port: int = Field(default=8001, validation_alias=AliasChoices("APP_PORT", "PORT"))
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
@@ -75,23 +61,29 @@ class Settings(BaseSettings):
     auth_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     auth_cookie_domain: str | None = None
 
-    serpapi_country: str = "us"
-    serpapi_language: str = "en"
-    serpapi_cost_usd: float = 0.01
-    firecrawl_cost_usd: float = 0.01
+    wabash_default_research_engine: Literal["perplexity", "parallel"] = Field(
+        default="perplexity",
+        validation_alias=AliasChoices("WABASH_DEFAULT_RESEARCH_ENGINE"),
+    )
+    wabash_default_perplexity_model: str = Field(
+        default="preset:pro-search",
+        validation_alias=AliasChoices("WABASH_DEFAULT_PERPLEXITY_MODEL"),
+    )
+    parallel_task_processor: str = Field(
+        default="base",
+        validation_alias=AliasChoices("PARALLEL_TASK_PROCESSOR"),
+    )
+    max_research_cost_usd: float = Field(
+        default=0.06,
+        validation_alias=AliasChoices("WABASH_MAX_RESEARCH_COST_USD"),
+    )
+    perplexity_agent_cost_usd: float = Field(default=0.02)
+    parallel_task_cost_usd: float = Field(
+        default=0.02,
+        validation_alias=AliasChoices("PARALLEL_TASK_COST_USD", "PARALLEL_SEARCH_COST_USD"),
+    )
     max_run_seconds: int = Field(default=300, ge=30)
-
-    wabash_match_model: str = Field(default="gpt-4o-mini", validation_alias=AliasChoices("WABASH_MATCH_MODEL"))
-    wabash_scorer_max_chars: int = Field(default=12_000, ge=2_000)
-
-    research_pdf_max_bytes: int = Field(default=2_000_000, ge=0)
-    research_pdf_max_chars: int = Field(default=25_000, ge=1_000)
-    research_page_max_chars: int = Field(default=50_000, ge=1_000)
-    research_candidate_limit: int = Field(default=5, ge=1, le=10)
-    prefilter_crawl_top_n: int = Field(default=5, ge=1, le=10)
-    prefilter_product_page_min_score: int = Field(default=35, ge=0, le=100)
-    prefilter_product_match_min_score: int = Field(default=60, ge=0, le=100)
-    prefilter_fallback_keep_top_n: int = Field(default=2, ge=1, le=5)
+    attribute_fuzzy_threshold: int = Field(default=90, ge=70, le=100)
 
     @property
     def cors_origin_list(self) -> list[str]:

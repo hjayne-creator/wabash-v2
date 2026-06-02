@@ -73,6 +73,48 @@ label { display: block; margin: 12px 0 4px; font-size: 13px; color: var(--muted)
   font-size: 18px;
 }
 
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 16px 0;
+}
+
+.sidebar-nav .nav-link,
+.sidebar-nav .nav-active {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid transparent;
+  font-weight: 500;
+}
+
+.sidebar-nav .nav-active {
+  background: var(--panel-2);
+  border-color: var(--border);
+  color: var(--accent);
+}
+
+.source-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.source-list a {
+  color: var(--accent);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-row input {
+  width: auto;
+}
+
 .research-preview {
   margin-top: 16px;
   border: 1px solid var(--accent);
