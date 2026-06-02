@@ -37,6 +37,22 @@ def build_research_instructions(*, attributes: list[ProductAttribute]) -> str:
     return "\n".join(lines)
 
 
+def build_parallel_instructions() -> str:
+    # Parallel already receives attribute targets and an output JSON schema separately.
+    # Keeping this short avoids repeating large attribute lists in both text and JSON.
+    return "\n".join(
+        [
+            "You are a research expert for commercial transportation parts.",
+            "Research as many product attributes as possible for the given product.",
+            "Use manufacturer sites, data sheets, and reputable resellers as sources of truth.",
+            "If you cannot find a matching product, set product_found to false and return empty attributes.",
+            "Respond with valid JSON only (no markdown fences).",
+            "Populate only attributes supported by evidence; use empty string when not found.",
+            "Always include sources with url and title.",
+        ]
+    )
+
+
 def build_research_input(*, manufacturer_name: str, manufacturer_product_number: str) -> str:
     return (
         f"Research product attributes for:\n"
@@ -64,7 +80,7 @@ def build_parallel_task_input(
     return {
         "manufacturer_name": manufacturer_name,
         "manufacturer_product_number": manufacturer_product_number,
-        "instructions": build_research_instructions(attributes=attributes),
+        "instructions": build_parallel_instructions(),
         "attribute_targets": targets,
     }
 
