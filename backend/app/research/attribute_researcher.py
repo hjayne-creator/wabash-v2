@@ -7,6 +7,7 @@ from typing import Any, Literal
 from sqlmodel import Session
 
 from app.adapters.brave_answers import BraveAnswersClient, BraveAnswersError, normalize_brave_model
+from app.adapters.openai_research import OpenAIResearchClient, OpenAIResearchError, normalize_openai_model
 from app.adapters.parallel_research import (
     ParallelResearchClient,
     ParallelResearchError,
@@ -21,13 +22,14 @@ from app.research.attribute_matcher import load_active_attributes, match_attribu
 from app.research.json_utils import parse_json_object
 from app.research.prompts import (
     build_brave_research_message,
+    build_openai_research_instructions,
     build_research_input,
     build_research_instructions,
 )
 
 logger = logging.getLogger(__name__)
 
-EngineProvider = Literal["perplexity", "parallel", "brave"]
+EngineProvider = Literal["perplexity", "parallel", "brave", "openai"]
 
 
 async def run_attribute_research(
@@ -46,6 +48,8 @@ async def run_attribute_research(
             engine_model = settings.wabash_default_perplexity_model
         elif engine_provider == "brave":
             engine_model = settings.wabash_default_brave_model
+        elif engine_provider == "openai":
+            engine_model = settings.wabash_default_openai_model
         else:
             engine_model = f"task-{get_settings().parallel_task_processor}"
 
@@ -79,9 +83,21 @@ async def run_attribute_research(
                     engine_model=engine_model,
                     catalog=catalog,
                 )
+            elif engine_provider == "openai":
+                raw = await _run_openai(
+                    manufacturer_name=manufacturer_name,
+                    manufacturer_product_number=manufacturer_product_number,
+                    engine_model=engine_model,
+                )
             else:
                 raise ValueError(f"Unsupported engine provider: {engine_provider}")
-        except (PerplexityAgentError, ParallelResearchError, BraveAnswersError, ValueError) as exc:
+        except (
+            PerplexityAgentError,
+            ParallelResearchError,
+            BraveAnswersError,
+            OpenAIResearchError,
+            ValueError,
+        ) as exc:
             status = "error"
             error_message = str(exc)
             raw = {"product_found": False, "attributes": {}, "sources": [], "notes": error_message}
@@ -155,6 +171,28 @@ async def _run_perplexity(
 
     model = normalize_perplexity_model(engine_model or settings.wabash_default_perplexity_model)
     instructions = build_research_instructions()
+    user_input = build_research_input(
+        manufacturer_name=manufacturer_name,
+        manufacturer_product_number=manufacturer_product_number,
+    )
+    text, _payload = await client.research(model=model, input_text=user_input, instructions=instructions)
+    parsed = parse_json_object(text)
+    return _normalize_raw(parsed, manufacturer_name, manufacturer_product_number)
+
+
+async def _run_openai(
+    *,
+    manufacturer_name: str,
+    manufacturer_product_number: str,
+    engine_model: str,
+) -> dict[str, Any]:
+    settings = get_settings()
+    client = OpenAIResearchClient()
+    if not client.configured:
+        raise OpenAIResearchError(settings.missing_api_key_hint("OPENAI_API_KEY"))
+
+    model = normalize_openai_model(engine_model or settings.wabash_default_openai_model)
+    instructions = build_openai_research_instructions()
     user_input = build_research_input(
         manufacturer_name=manufacturer_name,
         manufacturer_product_number=manufacturer_product_number,

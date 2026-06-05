@@ -3,47 +3,75 @@ from __future__ import annotations
 
 from app.models.db import ProductAttribute
 
+_RESEARCH_JSON_SCHEMA_EXAMPLE = """{
+  "product_found": boolean,
+  "manufacturer_name": string,
+  "manufacturer_product_number": string,
+  "attributes": { "<attribute label>": "<value>", ... },
+  "sources": [{ "url": string, "title": string }],
+  "notes": string (optional)
+}"""
 
-def build_research_instructions() -> str:
+
+def _research_instruction_bullets(*, include_sources_reminder: bool = False) -> list[str]:
+    bullets = [
+        "- Research as many product attributes as possible for the given product.",
+        "- Use manufacturer websites, data sheets, and reseller listings as sources of truth.",
+        "- Set `product_found` to `true` when the exact part is found or when a clearly equivalent "
+        "listing is found, including alternate manufacturer product number formatting.",
+        "- If no matching product can be found, set `product_found` to `false` and return empty attributes.",
+        "- Populate only attributes that are supported by evidence.",
+        "- Use an empty string for any unknown value.",
+        "- Keep attribute values short and concise.",
+        "- Respond with valid JSON only.",
+        "- Do not use markdown fences.",
+    ]
+    if include_sources_reminder:
+        bullets.insert(6, "- Always include sources with url and title.")
+    return bullets
+
+
+def _build_structured_research_instructions(*, include_sources_reminder: bool = False) -> str:
     return "\n".join(
         [
-            "You are a research expert for commercial transportation parts.",
-            "Help research as many product attributes as possible for the given product.",
-            "Use manufacturer sites, data sheets, and resellers as sources of truth.",
-            "Set product_found to true when the exact part or a clearly equivalent listing is found "
-            "(including alternate MPN formatting).",
-            "If you cannot find a matching product, set product_found to false and return empty attributes.",
-            "Populate only attributes supported by evidence; use an empty string when unknown.",
-            "Keep attribute values short and concise.",
-            "Respond with valid JSON only, no markdown fences.",
+            "# Role and Objective",
+            "You are a research specialist for commercial transportation parts.",
             "",
-            "JSON schema:",
-            "{",
-            '  "product_found": boolean,',
-            '  "manufacturer_name": string,',
-            '  "manufacturer_product_number": string,',
-            '  "attributes": { "<attribute label>": "<value>", ... },',
-            '  "sources": [{ "url": string, "title": string }],',
-            '  "notes": string (optional)',
-            "}",
+            "# Instructions",
+            *_research_instruction_bullets(include_sources_reminder=include_sources_reminder),
+            "",
+            "# Output Format",
+            "Return a JSON object that follows this schema:",
+            "```json",
+            _RESEARCH_JSON_SCHEMA_EXAMPLE,
+            "```",
         ]
     )
 
 
+def build_research_instructions() -> str:
+    """System/instructions prompt for Perplexity and OpenAI (split message APIs)."""
+    return _build_structured_research_instructions()
+
+
+def build_openai_research_instructions() -> str:
+    """OpenAI-recommended structured prompt; same rules as other engines."""
+    return build_research_instructions()
+
+
 def build_parallel_instructions() -> str:
+    """Behavioral instructions for Parallel; output shape is enforced by task_spec."""
     return "\n".join(
         [
-            "You are a research expert for commercial transportation parts.",
-            "Research as many product attributes as possible for the given product.",
-            "Use manufacturer sites, data sheets, and reputable resellers as sources of truth.",
-            "Set product_found to true when the exact part or a clearly equivalent listing is found "
-            "(including alternate MPN formatting).",
-            "If you cannot find a matching product, set product_found to false and return empty attributes.",
-            "Populate only attributes supported by evidence; use empty string when not found.",
-            "Always include sources with url and title.",
-            "Keep attribute values short and concise.",
-            "Respond with valid JSON only (no markdown fences).",
-            ]
+            "# Role and Objective",
+            "You are a research specialist for commercial transportation parts.",
+            "",
+            "# Instructions",
+            *_research_instruction_bullets(include_sources_reminder=True),
+            "",
+            "# Output Format",
+            "Return structured JSON matching the provided output schema.",
+        ]
     )
 
 
@@ -61,24 +89,26 @@ def build_brave_research_message(
     manufacturer_name: str,
     manufacturer_product_number: str,
 ) -> str:
-    """Compact, search-first prompt for Brave Answers (single-message API)."""
-    return (
-        f"Find specifications and datasheets for {manufacturer_name} part "
-        f"{manufacturer_product_number} (commercial transportation / industrial parts).\n"
-        "Search manufacturer websites, PDF datasheets, and reputable parts catalogs.\n"
-        "Set product_found to true when the exact part or a clearly equivalent listing is found "
-        "(including alternate MPN formatting).\n"
-        "Populate only attributes supported by evidence; use an empty string when unknown.\n"
-        "Keep attribute values short and concise.\n\n"
-        "Return valid JSON only (no markdown fences):\n"
-        "{\n"
-        '  "product_found": boolean,\n'
-        '  "manufacturer_name": string,\n'
-        '  "manufacturer_product_number": string,\n'
-        '  "attributes": { "<attribute label>": "<value>", ... },\n'
-        '  "sources": [{ "url": string, "title": string }],\n'
-        '  "notes": string (optional)\n'
-        "}"
+    """Search-first single-message prompt for Brave Answers (user role only)."""
+    user_query = build_research_input(
+        manufacturer_name=manufacturer_name,
+        manufacturer_product_number=manufacturer_product_number,
+    )
+    return "\n\n".join(
+        [
+            user_query,
+            "# Role and Objective",
+            "You are a research specialist for commercial transportation parts.",
+            "",
+            "# Instructions",
+            *_research_instruction_bullets(),
+            "",
+            "# Output Format",
+            "Return a JSON object that follows this schema:",
+            "```json",
+            _RESEARCH_JSON_SCHEMA_EXAMPLE,
+            "```",
+        ]
     )
 
 

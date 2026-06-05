@@ -17,7 +17,7 @@ def test_build_brave_research_message_is_search_first():
     )
     assert "JOST INTERNATIONAL" in message
     assert "AX150L.T1.19" in message
-    assert message.index("JOST INTERNATIONAL") < message.index("Return valid JSON")
+    assert message.index("JOST INTERNATIONAL") < message.index("# Output Format")
     assert "Target attribute labels" not in message
 
 

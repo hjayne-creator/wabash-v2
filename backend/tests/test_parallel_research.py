@@ -56,6 +56,7 @@ def test_build_brave_research_message_returns_string():
     )
     assert isinstance(message, str)
     assert "Keep attribute values short and concise." in message
+    assert "# Output Format" in message
     assert '"product_found": boolean' in message
 
 

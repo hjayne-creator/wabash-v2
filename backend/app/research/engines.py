@@ -32,6 +32,19 @@ PERPLEXITY_MODEL_OPTIONS: list[dict[str, str]] = [
     },
 ]
 
+OPENAI_MODEL_OPTIONS: list[dict[str, str]] = [
+    {
+        "model": "gpt-4o-mini",
+        "display_name": "GPT-4o Mini",
+        "description": "OpenAI Responses API with built-in web search — fast, cost-effective attribute research",
+    },
+    {
+        "model": "gpt-5-mini-2025-08-07",
+        "display_name": "GPT-5 Mini",
+        "description": "OpenAI Responses API with built-in web search — newer mini model with stronger reasoning",
+    },
+]
+
 BRAVE_MODEL_OPTIONS: list[dict[str, str]] = [
     {
         "model": "brave",
@@ -71,6 +84,32 @@ def list_research_engines() -> list[dict]:
                 "description": "From WABASH_DEFAULT_PERPLEXITY_MODEL",
                 "is_default": settings.wabash_default_research_engine == "perplexity",
             },
+        )
+
+    openai_default_model = settings.wabash_default_openai_model
+    for option in OPENAI_MODEL_OPTIONS:
+        engines.append(
+            {
+                "provider": "openai",
+                "model": option["model"],
+                "display_name": option["display_name"],
+                "description": option["description"],
+                "is_default": (
+                    settings.wabash_default_research_engine == "openai"
+                    and option["model"] == openai_default_model
+                ),
+            }
+        )
+
+    if not any(e["provider"] == "openai" and e["model"] == openai_default_model for e in engines):
+        engines.append(
+            {
+                "provider": "openai",
+                "model": openai_default_model,
+                "display_name": "OpenAI (configured default)",
+                "description": "From WABASH_DEFAULT_OPENAI_MODEL",
+                "is_default": settings.wabash_default_research_engine == "openai",
+            }
         )
 
     brave_default_model = settings.wabash_default_brave_model

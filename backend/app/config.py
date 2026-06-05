@@ -62,9 +62,13 @@ class Settings(BaseSettings):
     auth_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     auth_cookie_domain: str | None = None
 
-    wabash_default_research_engine: Literal["perplexity", "parallel", "brave"] = Field(
+    wabash_default_research_engine: Literal["perplexity", "parallel", "brave", "openai"] = Field(
         default="perplexity",
         validation_alias=AliasChoices("WABASH_DEFAULT_RESEARCH_ENGINE"),
+    )
+    wabash_default_openai_model: str = Field(
+        default="gpt-4o-mini",
+        validation_alias=AliasChoices("WABASH_DEFAULT_OPENAI_MODEL"),
     )
     wabash_default_brave_model: str = Field(
         default="brave",
@@ -90,6 +94,10 @@ class Settings(BaseSettings):
     parallel_task_cost_usd: float = Field(
         default=0.02,
         validation_alias=AliasChoices("PARALLEL_TASK_COST_USD", "PARALLEL_SEARCH_COST_USD"),
+    )
+    openai_web_search_cost_usd: float = Field(
+        default=0.01,
+        validation_alias=AliasChoices("OPENAI_WEB_SEARCH_COST_USD"),
     )
     max_run_seconds: int = Field(default=300, ge=30)
     attribute_fuzzy_threshold: int = Field(default=90, ge=70, le=100)

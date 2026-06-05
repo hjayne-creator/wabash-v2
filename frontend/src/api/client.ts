@@ -35,7 +35,7 @@ export type CostLine = {
 
 export type RuntimeLine = { phase: string; duration_ms: number };
 
-export type ResearchEngineProvider = "perplexity" | "parallel" | "brave";
+export type ResearchEngineProvider = "perplexity" | "parallel" | "brave" | "openai";
 
 export type ResearchEngine = {
   provider: ResearchEngineProvider;

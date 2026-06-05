@@ -34,6 +34,8 @@ async def _startup() -> None:
         log.warning("PARALLEL_API_KEY is not set. %s", settings_cfg.missing_api_key_hint("PARALLEL_API_KEY"))
     if not settings_cfg.brave_api_key:
         log.warning("BRAVE_API_KEY is not set. %s", settings_cfg.missing_api_key_hint("BRAVE_API_KEY"))
+    if not settings_cfg.openai_api_key:
+        log.warning("OPENAI_API_KEY is not set. %s", settings_cfg.missing_api_key_hint("OPENAI_API_KEY"))
 
 
 @app.get("/health")

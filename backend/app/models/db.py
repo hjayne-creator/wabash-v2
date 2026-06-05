@@ -107,6 +107,7 @@ def init_db() -> None:
         }
         default_model_prices = [
             ("openai", "gpt-4o-mini", 0.15, 0.60),
+            ("openai", "gpt-5-mini-2025-08-07", 0.25, 2.00),
             ("perplexity", "openai/gpt-4o-mini", 0.15, 0.60),
             ("perplexity", "preset:pro-search", 0.50, 2.00),
             ("brave", "brave", 5.0, 5.0),

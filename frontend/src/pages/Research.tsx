@@ -5,6 +5,7 @@ const PROVIDER_LABELS: Record<ResearchEngineProvider, string> = {
   perplexity: "Perplexity",
   parallel: "Parallel",
   brave: "Brave",
+  openai: "OpenAI",
 };
 
 const VISIBLE_PERPLEXITY_MODELS = new Set(["preset:pro-search"]);
