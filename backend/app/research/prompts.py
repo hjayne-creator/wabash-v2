@@ -12,6 +12,7 @@ def build_research_instructions() -> str:
             "(including alternate MPN formatting).",
             "If you cannot find a matching product, set product_found to false and return empty attributes.",
             "Populate only attributes supported by evidence; use an empty string when unknown.",
+            "Keep attribute values short and concise.",
             "Respond with valid JSON only, no markdown fences.",
             "",
             "JSON schema:",
@@ -36,17 +37,18 @@ def build_parallel_instructions() -> str:
             "Set product_found to true when the exact part or a clearly equivalent listing is found "
             "(including alternate MPN formatting).",
             "If you cannot find a matching product, set product_found to false and return empty attributes.",
-            "Respond with valid JSON only (no markdown fences).",
             "Populate only attributes supported by evidence; use empty string when not found.",
             "Always include sources with url and title.",
-        ]
+            "Keep attribute values short and concise.",
+            "Respond with valid JSON only (no markdown fences).",
+            ]
     )
 
 
 def build_research_input(*, manufacturer_name: str, manufacturer_product_number: str) -> str:
     return (
         f"Find specifications and datasheets for {manufacturer_name} part "
-        f"{manufacturer_product_number} (commercial transportation / trailer parts).\n"
+        f"{manufacturer_product_number} (commercial transportation / industrial parts).\n"
         "Search manufacturer websites, PDF datasheets, and reputable parts catalogs.\n"
         "Return comprehensive attributes and cite sources."
     )
@@ -60,11 +62,12 @@ def build_brave_research_message(
     """Compact, search-first prompt for Brave Answers (single-message API)."""
     return (
         f"Find specifications and datasheets for {manufacturer_name} part "
-        f"{manufacturer_product_number} (commercial transportation / trailer parts).\n"
+        f"{manufacturer_product_number} (commercial transportation / industrial parts).\n"
         "Search manufacturer websites, PDF datasheets, and reputable parts catalogs.\n"
         "Set product_found to true when the exact part or a clearly equivalent listing is found "
         "(including alternate MPN formatting).\n"
         "Populate only attributes supported by evidence; use an empty string when unknown.\n\n"
+        "Keep attribute values short and concise.",
         "Return valid JSON only (no markdown fences):\n"
         "{\n"
         '  "product_found": boolean,\n'
