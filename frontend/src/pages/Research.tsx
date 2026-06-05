@@ -4,8 +4,16 @@ import { api, ResearchEngine, ResearchEngineProvider, ResearchRunResponse } from
 const PROVIDER_LABELS: Record<ResearchEngineProvider, string> = {
   perplexity: "Perplexity",
   parallel: "Parallel",
-  brave: "Brave Answers",
+  brave: "Brave",
 };
+
+const VISIBLE_PERPLEXITY_MODELS = new Set(["preset:pro-search"]);
+
+function filterVisibleEngines(list: ResearchEngine[]): ResearchEngine[] {
+  return list.filter(
+    (engine) => engine.provider !== "perplexity" || VISIBLE_PERPLEXITY_MODELS.has(engine.model),
+  );
+}
 import { ResearchResults } from "../components/ResearchResults";
 
 export function ResearchPage() {
@@ -22,8 +30,9 @@ export function ResearchPage() {
     api
       .getResearchEngines()
       .then((list) => {
-        setEngines(list);
-        const defaultEngine = list.find((e) => e.is_default) ?? list[0];
+        const visible = filterVisibleEngines(list);
+        setEngines(visible);
+        const defaultEngine = visible.find((e) => e.is_default) ?? visible[0];
         if (defaultEngine) {
           setEngineProvider(defaultEngine.provider);
           setEngineModel(defaultEngine.model);
