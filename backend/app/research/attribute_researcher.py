@@ -77,6 +77,7 @@ async def run_attribute_research(
                     manufacturer_name=manufacturer_name,
                     manufacturer_product_number=manufacturer_product_number,
                     engine_model=engine_model,
+                    catalog=catalog,
                 )
             else:
                 raise ValueError(f"Unsupported engine provider: {engine_provider}")
@@ -189,6 +190,7 @@ async def _run_parallel(
     manufacturer_name: str,
     manufacturer_product_number: str,
     engine_model: str,
+    catalog: list[ProductAttribute],
 ) -> dict[str, Any]:
     settings = get_settings()
     client = ParallelResearchClient()
@@ -200,6 +202,7 @@ async def _run_parallel(
         manufacturer_name=manufacturer_name,
         manufacturer_product_number=manufacturer_product_number,
         processor=processor,
+        attributes=catalog,
     )
     return _normalize_raw(parsed, manufacturer_name, manufacturer_product_number)
 
