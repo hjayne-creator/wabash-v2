@@ -6,6 +6,7 @@ from typing import Any, Literal
 
 from sqlmodel import Session
 
+from app.adapters.brave_answers import BraveAnswersClient, BraveAnswersError, normalize_brave_model
 from app.adapters.parallel_research import (
     ParallelResearchClient,
     ParallelResearchError,
@@ -18,11 +19,15 @@ from app.observability.run_usage import run_tracking
 from app.reports.cost import build_cost_report, build_runtime_report
 from app.research.attribute_matcher import load_active_attributes, match_attributes, match_result_to_dict
 from app.research.json_utils import parse_json_object
-from app.research.prompts import build_research_input, build_research_instructions
+from app.research.prompts import (
+    build_brave_research_message,
+    build_research_input,
+    build_research_instructions,
+)
 
 logger = logging.getLogger(__name__)
 
-EngineProvider = Literal["perplexity", "parallel"]
+EngineProvider = Literal["perplexity", "parallel", "brave"]
 
 
 async def run_attribute_research(
@@ -39,6 +44,8 @@ async def run_attribute_research(
     if not engine_model.strip():
         if engine_provider == "perplexity":
             engine_model = settings.wabash_default_perplexity_model
+        elif engine_provider == "brave":
+            engine_model = settings.wabash_default_brave_model
         else:
             engine_model = f"task-{get_settings().parallel_task_processor}"
 
@@ -58,18 +65,22 @@ async def run_attribute_research(
                     manufacturer_name=manufacturer_name,
                     manufacturer_product_number=manufacturer_product_number,
                     engine_model=engine_model,
-                    catalog=catalog,
+                )
+            elif engine_provider == "brave":
+                raw = await _run_brave(
+                    manufacturer_name=manufacturer_name,
+                    manufacturer_product_number=manufacturer_product_number,
+                    engine_model=engine_model,
                 )
             elif engine_provider == "parallel":
                 raw = await _run_parallel(
                     manufacturer_name=manufacturer_name,
                     manufacturer_product_number=manufacturer_product_number,
                     engine_model=engine_model,
-                    catalog=catalog,
                 )
             else:
                 raise ValueError(f"Unsupported engine provider: {engine_provider}")
-        except (PerplexityAgentError, ParallelResearchError, ValueError) as exc:
+        except (PerplexityAgentError, ParallelResearchError, BraveAnswersError, ValueError) as exc:
             status = "error"
             error_message = str(exc)
             raw = {"product_found": False, "attributes": {}, "sources": [], "notes": error_message}
@@ -135,7 +146,6 @@ async def _run_perplexity(
     manufacturer_name: str,
     manufacturer_product_number: str,
     engine_model: str,
-    catalog: list[ProductAttribute],
 ) -> dict[str, Any]:
     settings = get_settings()
     client = PerplexityAgentClient()
@@ -143,7 +153,7 @@ async def _run_perplexity(
         raise PerplexityAgentError(settings.missing_api_key_hint("PERPLEXITY_API_KEY"))
 
     model = normalize_perplexity_model(engine_model or settings.wabash_default_perplexity_model)
-    instructions = build_research_instructions(attributes=catalog)
+    instructions = build_research_instructions()
     user_input = build_research_input(
         manufacturer_name=manufacturer_name,
         manufacturer_product_number=manufacturer_product_number,
@@ -153,12 +163,32 @@ async def _run_perplexity(
     return _normalize_raw(parsed, manufacturer_name, manufacturer_product_number)
 
 
+async def _run_brave(
+    *,
+    manufacturer_name: str,
+    manufacturer_product_number: str,
+    engine_model: str,
+) -> dict[str, Any]:
+    settings = get_settings()
+    client = BraveAnswersClient()
+    if not client.configured:
+        raise BraveAnswersError(settings.missing_api_key_hint("BRAVE_API_KEY"))
+
+    model = normalize_brave_model(engine_model or settings.wabash_default_brave_model)
+    prompt = build_brave_research_message(
+        manufacturer_name=manufacturer_name,
+        manufacturer_product_number=manufacturer_product_number,
+    )
+    text, _payload = await client.research(model=model, input_text=prompt, instructions="")
+    parsed = parse_json_object(text)
+    return _normalize_raw(parsed, manufacturer_name, manufacturer_product_number)
+
+
 async def _run_parallel(
     *,
     manufacturer_name: str,
     manufacturer_product_number: str,
     engine_model: str,
-    catalog: list[ProductAttribute],
 ) -> dict[str, Any]:
     settings = get_settings()
     client = ParallelResearchClient()
@@ -169,7 +199,6 @@ async def _run_parallel(
     parsed = await client.research_product(
         manufacturer_name=manufacturer_name,
         manufacturer_product_number=manufacturer_product_number,
-        attributes=catalog,
         processor=processor,
     )
     return _normalize_raw(parsed, manufacturer_name, manufacturer_product_number)

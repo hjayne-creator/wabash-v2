@@ -25,7 +25,7 @@ class RuntimeLineItem(BaseModel):
 
 
 class ResearchEngineOption(BaseModel):
-    provider: Literal["perplexity", "parallel"]
+    provider: Literal["perplexity", "parallel", "brave"]
     model: str
     display_name: str
     description: str
@@ -35,7 +35,7 @@ class ResearchEngineOption(BaseModel):
 class ResearchRunRequest(BaseModel):
     manufacturer_name: str
     manufacturer_product_number: str
-    engine_provider: Literal["perplexity", "parallel"] = "perplexity"
+    engine_provider: Literal["perplexity", "parallel", "brave"] = "perplexity"
     engine_model: str = ""
 
 

@@ -109,6 +109,7 @@ def init_db() -> None:
             ("openai", "gpt-4o-mini", 0.15, 0.60),
             ("perplexity", "openai/gpt-4o-mini", 0.15, 0.60),
             ("perplexity", "preset:pro-search", 0.50, 2.00),
+            ("brave", "brave", 5.0, 5.0),
             ("parallel", "task-base", 0.0, 0.0),
             ("parallel", "task-core", 0.0, 0.0),
         ]

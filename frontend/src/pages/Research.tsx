@@ -1,12 +1,18 @@
 import { FormEvent, useEffect, useState } from "react";
-import { api, ResearchEngine, ResearchRunResponse } from "../api/client";
+import { api, ResearchEngine, ResearchEngineProvider, ResearchRunResponse } from "../api/client";
+
+const PROVIDER_LABELS: Record<ResearchEngineProvider, string> = {
+  perplexity: "Perplexity",
+  parallel: "Parallel",
+  brave: "Brave Answers",
+};
 import { ResearchResults } from "../components/ResearchResults";
 
 export function ResearchPage() {
   const [manufacturer, setManufacturer] = useState("");
   const [mpn, setMpn] = useState("");
   const [engines, setEngines] = useState<ResearchEngine[]>([]);
-  const [engineProvider, setEngineProvider] = useState<"perplexity" | "parallel">("perplexity");
+  const [engineProvider, setEngineProvider] = useState<ResearchEngineProvider>("perplexity");
   const [engineModel, setEngineModel] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +32,7 @@ export function ResearchPage() {
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load engines."));
   }, []);
 
+  const providers = [...new Set(engines.map((e) => e.provider))];
   const modelsForProvider = engines.filter((e) => e.provider === engineProvider);
 
   useEffect(() => {
@@ -98,10 +105,13 @@ export function ResearchPage() {
               <select
                 id="engine-provider"
                 value={engineProvider}
-                onChange={(e) => setEngineProvider(e.target.value as "perplexity" | "parallel")}
+                onChange={(e) => setEngineProvider(e.target.value as ResearchEngineProvider)}
               >
-                <option value="perplexity">Perplexity</option>
-                <option value="parallel">Parallel</option>
+                {providers.map((provider) => (
+                  <option key={provider} value={provider}>
+                    {PROVIDER_LABELS[provider]}
+                  </option>
+                ))}
               </select>
             </div>
             <div>

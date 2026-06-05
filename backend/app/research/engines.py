@@ -32,6 +32,14 @@ PERPLEXITY_MODEL_OPTIONS: list[dict[str, str]] = [
     },
 ]
 
+BRAVE_MODEL_OPTIONS: list[dict[str, str]] = [
+    {
+        "model": "brave",
+        "display_name": "Brave Answers",
+        "description": "Single web search with grounded answers",
+    },
+]
+
 
 def list_research_engines() -> list[dict]:
     settings = get_settings()
@@ -63,6 +71,32 @@ def list_research_engines() -> list[dict]:
                 "description": "From WABASH_DEFAULT_PERPLEXITY_MODEL",
                 "is_default": settings.wabash_default_research_engine == "perplexity",
             },
+        )
+
+    brave_default_model = settings.wabash_default_brave_model
+    for option in BRAVE_MODEL_OPTIONS:
+        engines.append(
+            {
+                "provider": "brave",
+                "model": option["model"],
+                "display_name": option["display_name"],
+                "description": option["description"],
+                "is_default": (
+                    settings.wabash_default_research_engine == "brave"
+                    and option["model"] == brave_default_model
+                ),
+            }
+        )
+
+    if not any(e["provider"] == "brave" and e["model"] == brave_default_model for e in engines):
+        engines.append(
+            {
+                "provider": "brave",
+                "model": brave_default_model,
+                "display_name": "Brave Answers (configured default)",
+                "description": "From WABASH_DEFAULT_BRAVE_MODEL",
+                "is_default": settings.wabash_default_research_engine == "brave",
+            }
         )
 
     parallel_model = f"task-{settings.parallel_task_processor}"

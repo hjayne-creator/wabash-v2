@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     perplexity_api_key: str | None = None
     parallel_api_key: str | None = None
+    brave_api_key: str | None = None
 
     @staticmethod
     def _coerce_blank_api_key(value: object) -> object:
@@ -36,7 +37,7 @@ class Settings(BaseSettings):
             return None
         return value
 
-    @field_validator("openai_api_key", "perplexity_api_key", "parallel_api_key", mode="before")
+    @field_validator("openai_api_key", "perplexity_api_key", "parallel_api_key", "brave_api_key", mode="before")
     @classmethod
     def _normalize_api_keys(cls, value: object) -> object:
         return cls._coerce_blank_api_key(value)
@@ -61,9 +62,13 @@ class Settings(BaseSettings):
     auth_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     auth_cookie_domain: str | None = None
 
-    wabash_default_research_engine: Literal["perplexity", "parallel"] = Field(
+    wabash_default_research_engine: Literal["perplexity", "parallel", "brave"] = Field(
         default="perplexity",
         validation_alias=AliasChoices("WABASH_DEFAULT_RESEARCH_ENGINE"),
+    )
+    wabash_default_brave_model: str = Field(
+        default="brave",
+        validation_alias=AliasChoices("WABASH_DEFAULT_BRAVE_MODEL"),
     )
     wabash_default_perplexity_model: str = Field(
         default="preset:pro-search",
@@ -78,6 +83,10 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("WABASH_MAX_RESEARCH_COST_USD"),
     )
     perplexity_agent_cost_usd: float = Field(default=0.02)
+    brave_answers_search_cost_usd: float = Field(
+        default=0.004,
+        validation_alias=AliasChoices("BRAVE_ANSWERS_SEARCH_COST_USD"),
+    )
     parallel_task_cost_usd: float = Field(
         default=0.02,
         validation_alias=AliasChoices("PARALLEL_TASK_COST_USD", "PARALLEL_SEARCH_COST_USD"),

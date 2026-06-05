@@ -8,7 +8,6 @@ import httpx
 from tenacity import AsyncRetrying, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from app.config import get_settings
-from app.models.db import ProductAttribute
 from app.observability.run_usage import log_external_cost
 from app.research.prompts import build_parallel_task_input, build_parallel_task_spec
 
@@ -70,7 +69,6 @@ class ParallelResearchClient:
         *,
         manufacturer_name: str,
         manufacturer_product_number: str,
-        attributes: list[ProductAttribute],
         processor: str,
     ) -> dict[str, Any]:
         settings = get_settings()
@@ -86,9 +84,8 @@ class ParallelResearchClient:
             "input": build_parallel_task_input(
                 manufacturer_name=manufacturer_name,
                 manufacturer_product_number=manufacturer_product_number,
-                attributes=attributes,
             ),
-            "task_spec": build_parallel_task_spec(attributes=attributes),
+            "task_spec": build_parallel_task_spec(),
         }
 
         run_id = await self._create_task_run(body)

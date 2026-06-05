@@ -35,8 +35,10 @@ export type CostLine = {
 
 export type RuntimeLine = { phase: string; duration_ms: number };
 
+export type ResearchEngineProvider = "perplexity" | "parallel" | "brave";
+
 export type ResearchEngine = {
-  provider: "perplexity" | "parallel";
+  provider: ResearchEngineProvider;
   model: string;
   display_name: string;
   description: string;
@@ -114,7 +116,7 @@ export const api = {
   runResearch: (body: {
     manufacturer_name: string;
     manufacturer_product_number: string;
-    engine_provider: "perplexity" | "parallel";
+    engine_provider: ResearchEngineProvider;
     engine_model: string;
   }) => request<ResearchRunResponse>("/research/run", { method: "POST", body: JSON.stringify(body) }),
   listResearchRuns: (limit = 50) => request<ResearchRunSummary[]>(`/research/runs?limit=${limit}`),
