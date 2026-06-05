@@ -12,7 +12,7 @@ export function ResearchResults({ result, onDismiss }: Props) {
     <div className="card results-card">
       <div className="row between">
         <div>
-          <h3>Research results</h3>
+          <h3 id="report-results-title">Research results</h3>
           <p className="muted small">
             Run #{result.id} · {result.status} · Fill {result.fill_pct}% ({result.attributes_filled}/
             {result.attributes_total}) · ${result.total_cost_usd.toFixed(4)}

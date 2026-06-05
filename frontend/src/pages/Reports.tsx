@@ -5,6 +5,7 @@ import { ResearchResults } from "../components/ResearchResults";
 export function ReportsPage() {
   const [runs, setRuns] = useState<ResearchRunSummary[]>([]);
   const [selected, setSelected] = useState<ResearchRunResponse | null>(null);
+  const [loadingRunId, setLoadingRunId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -16,14 +17,34 @@ export function ReportsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!selected) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setSelected(null);
+    }
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [selected]);
+
   async function openRun(id: number) {
+    setLoadingRunId(id);
     try {
       const detail = await api.getResearchRun(id);
       setSelected(detail);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load run.");
+    } finally {
+      setLoadingRunId(null);
     }
+  }
+
+  function closeRun() {
+    setSelected(null);
   }
 
   return (
@@ -65,8 +86,13 @@ export function ReportsPage() {
                 <td>${run.total_cost_usd.toFixed(4)}</td>
                 <td>{run.status}</td>
                 <td>
-                  <button type="button" className="secondary" onClick={() => void openRun(run.id)}>
-                    View
+                  <button
+                    type="button"
+                    className="secondary"
+                    disabled={loadingRunId === run.id}
+                    onClick={() => void openRun(run.id)}
+                  >
+                    {loadingRunId === run.id ? "Loading…" : "View"}
                   </button>
                 </td>
               </tr>
@@ -76,7 +102,19 @@ export function ReportsPage() {
         {!loading && runs.length === 0 ? <p className="muted small">No runs yet.</p> : null}
       </div>
 
-      {selected ? <ResearchResults result={selected} onDismiss={() => setSelected(null)} /> : null}
+      {selected ? (
+        <div className="modal-backdrop" onClick={closeRun} role="presentation">
+          <div
+            className="modal-panel"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="report-results-title"
+          >
+            <ResearchResults result={selected} onDismiss={closeRun} />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
