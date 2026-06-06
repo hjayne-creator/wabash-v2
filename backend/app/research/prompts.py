@@ -175,6 +175,28 @@ def _parallel_attributes_object_schema(
     }
 
 
+def build_firecrawl_agent_prompt(
+    *,
+    manufacturer_name: str,
+    manufacturer_product_number: str,
+    attributes: list[ProductAttribute],
+) -> str:
+    parts = [
+        f"Extract all product attributes for the {manufacturer_name} {manufacturer_product_number}.",
+        "Prioritize data from the official manufacturer followed by reseller listings.",
+        "Include technical specifications, installation manuals, and links to technical drawings.",
+        "Populate the structured output with discovered attributes and cite sources.",
+    ]
+    if attributes:
+        labels = ", ".join(attr.label for attr in attributes[:40])
+        parts.append(f"Target catalog attribute labels: {labels}.")
+    return " ".join(parts)
+
+
+def build_firecrawl_agent_schema(*, attributes: list[ProductAttribute]) -> dict[str, object]:
+    return build_parallel_task_spec(attributes=attributes)["output_schema"]["json_schema"]
+
+
 def build_parallel_task_spec(*, attributes: list[ProductAttribute]) -> dict[str, object]:
     return {
         "output_schema": {

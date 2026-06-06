@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     perplexity_api_key: str | None = None
     parallel_api_key: str | None = None
     brave_api_key: str | None = None
+    firecrawl_api_key: str | None = None
 
     @staticmethod
     def _coerce_blank_api_key(value: object) -> object:
@@ -37,7 +38,14 @@ class Settings(BaseSettings):
             return None
         return value
 
-    @field_validator("openai_api_key", "perplexity_api_key", "parallel_api_key", "brave_api_key", mode="before")
+    @field_validator(
+        "openai_api_key",
+        "perplexity_api_key",
+        "parallel_api_key",
+        "brave_api_key",
+        "firecrawl_api_key",
+        mode="before",
+    )
     @classmethod
     def _normalize_api_keys(cls, value: object) -> object:
         return cls._coerce_blank_api_key(value)
@@ -62,9 +70,13 @@ class Settings(BaseSettings):
     auth_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     auth_cookie_domain: str | None = None
 
-    wabash_default_research_engine: Literal["perplexity", "parallel", "brave", "openai"] = Field(
+    wabash_default_research_engine: Literal["perplexity", "parallel", "brave", "openai", "firecrawl"] = Field(
         default="perplexity",
         validation_alias=AliasChoices("WABASH_DEFAULT_RESEARCH_ENGINE"),
+    )
+    wabash_default_firecrawl_model: str = Field(
+        default="spark-1-mini",
+        validation_alias=AliasChoices("WABASH_DEFAULT_FIRECRAWL_MODEL"),
     )
     wabash_default_openai_model: str = Field(
         default="gpt-4o-mini",
@@ -98,6 +110,24 @@ class Settings(BaseSettings):
     openai_web_search_cost_usd: float = Field(
         default=0.01,
         validation_alias=AliasChoices("OPENAI_WEB_SEARCH_COST_USD"),
+    )
+    firecrawl_agent_cost_usd: float = Field(
+        default=0.03,
+        validation_alias=AliasChoices("FIRECRAWL_AGENT_COST_USD"),
+    )
+    firecrawl_usd_per_credit: float = Field(
+        default=0.002,
+        validation_alias=AliasChoices("FIRECRAWL_USD_PER_CREDIT"),
+    )
+    firecrawl_agent_max_credits: int = Field(
+        default=100,
+        ge=1,
+        validation_alias=AliasChoices("FIRECRAWL_AGENT_MAX_CREDITS"),
+    )
+    firecrawl_agent_poll_interval_sec: int = Field(
+        default=5,
+        ge=2,
+        validation_alias=AliasChoices("FIRECRAWL_AGENT_POLL_INTERVAL_SEC"),
     )
     max_run_seconds: int = Field(default=300, ge=30)
     attribute_fuzzy_threshold: int = Field(default=90, ge=70, le=100)

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ResearchRunResponse, ResearchRunSummary } from "../api/client";
 import { ResearchResults } from "../components/ResearchResults";
+import { formatPacificDateTime } from "../utils/datetime";
 
 export function ReportsPage() {
   const [runs, setRuns] = useState<ResearchRunSummary[]>([]);
@@ -63,7 +64,7 @@ export function ReportsPage() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>Date</th>
+              <th>Date (PST)</th>
               <th>Manufacturer</th>
               <th>MPN</th>
               <th>Engine</th>
@@ -76,7 +77,7 @@ export function ReportsPage() {
           <tbody>
             {runs.map((run) => (
               <tr key={run.id}>
-                <td>{new Date(run.created_at).toLocaleString()}</td>
+                <td>{formatPacificDateTime(run.created_at)}</td>
                 <td>{run.manufacturer_name}</td>
                 <td>{run.manufacturer_product_number}</td>
                 <td>

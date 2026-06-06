@@ -53,6 +53,19 @@ BRAVE_MODEL_OPTIONS: list[dict[str, str]] = [
     },
 ]
 
+FIRECRAWL_MODEL_OPTIONS: list[dict[str, str]] = [
+    {
+        "model": "spark-1-mini",
+        "display_name": "Firecrawl Agent (spark-1-mini)",
+        "description": "Autonomous web research — cost-effective agent for product attribute extraction",
+    },
+    {
+        "model": "spark-1-pro",
+        "display_name": "Firecrawl Agent (spark-1-pro)",
+        "description": "Autonomous web research — higher accuracy for complex product lookups",
+    },
+]
+
 
 def list_research_engines() -> list[dict]:
     settings = get_settings()
@@ -151,4 +164,31 @@ def list_research_engines() -> list[dict]:
             "is_default": settings.wabash_default_research_engine == "parallel",
         }
     )
+
+    firecrawl_default_model = settings.wabash_default_firecrawl_model
+    for option in FIRECRAWL_MODEL_OPTIONS:
+        engines.append(
+            {
+                "provider": "firecrawl",
+                "model": option["model"],
+                "display_name": option["display_name"],
+                "description": option["description"],
+                "is_default": (
+                    settings.wabash_default_research_engine == "firecrawl"
+                    and option["model"] == firecrawl_default_model
+                ),
+            }
+        )
+
+    if not any(e["provider"] == "firecrawl" and e["model"] == firecrawl_default_model for e in engines):
+        engines.append(
+            {
+                "provider": "firecrawl",
+                "model": firecrawl_default_model,
+                "display_name": "Firecrawl Agent (configured default)",
+                "description": "From WABASH_DEFAULT_FIRECRAWL_MODEL",
+                "is_default": settings.wabash_default_research_engine == "firecrawl",
+            }
+        )
+
     return engines

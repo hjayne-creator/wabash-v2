@@ -162,8 +162,8 @@ export default function App() {
           <summary>How this works</summary>
           <div className="sidebar-about-body text-light-med">
             <p>
-              Enter a manufacturer and MPN, pick a web-research engine (Perplexity or Parallel), and run a single
-              research pass. Results are mapped to your attribute catalog with deterministic matching.
+              Enter a manufacturer and MPN, pick a web-research engine (Perplexity, Parallel, or Firecrawl), and run a
+              single research pass. Results are mapped to your attribute catalog with deterministic matching.
             </p>
           </div>
         </details>

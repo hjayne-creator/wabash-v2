@@ -7,6 +7,7 @@ from typing import Any, Literal
 from sqlmodel import Session
 
 from app.adapters.brave_answers import BraveAnswersClient, BraveAnswersError, normalize_brave_model
+from app.adapters.firecrawl_agent import FirecrawlAgentClient, FirecrawlAgentError, normalize_firecrawl_model
 from app.adapters.openai_research import OpenAIResearchClient, OpenAIResearchError, normalize_openai_model
 from app.adapters.parallel_research import (
     ParallelResearchClient,
@@ -29,7 +30,7 @@ from app.research.prompts import (
 
 logger = logging.getLogger(__name__)
 
-EngineProvider = Literal["perplexity", "parallel", "brave", "openai"]
+EngineProvider = Literal["perplexity", "parallel", "brave", "openai", "firecrawl"]
 
 
 async def run_attribute_research(
@@ -50,6 +51,8 @@ async def run_attribute_research(
             engine_model = settings.wabash_default_brave_model
         elif engine_provider == "openai":
             engine_model = settings.wabash_default_openai_model
+        elif engine_provider == "firecrawl":
+            engine_model = settings.wabash_default_firecrawl_model
         else:
             engine_model = f"task-{get_settings().parallel_task_processor}"
 
@@ -89,6 +92,13 @@ async def run_attribute_research(
                     manufacturer_product_number=manufacturer_product_number,
                     engine_model=engine_model,
                 )
+            elif engine_provider == "firecrawl":
+                raw = await _run_firecrawl(
+                    manufacturer_name=manufacturer_name,
+                    manufacturer_product_number=manufacturer_product_number,
+                    engine_model=engine_model,
+                    catalog=catalog,
+                )
             else:
                 raise ValueError(f"Unsupported engine provider: {engine_provider}")
         except (
@@ -96,6 +106,7 @@ async def run_attribute_research(
             ParallelResearchError,
             BraveAnswersError,
             OpenAIResearchError,
+            FirecrawlAgentError,
             ValueError,
         ) as exc:
             status = "error"
@@ -240,6 +251,28 @@ async def _run_parallel(
         manufacturer_name=manufacturer_name,
         manufacturer_product_number=manufacturer_product_number,
         processor=processor,
+        attributes=catalog,
+    )
+    return _normalize_raw(parsed, manufacturer_name, manufacturer_product_number)
+
+
+async def _run_firecrawl(
+    *,
+    manufacturer_name: str,
+    manufacturer_product_number: str,
+    engine_model: str,
+    catalog: list[ProductAttribute],
+) -> dict[str, Any]:
+    settings = get_settings()
+    client = FirecrawlAgentClient()
+    if not client.configured:
+        raise FirecrawlAgentError(settings.missing_api_key_hint("FIRECRAWL_API_KEY"))
+
+    model = normalize_firecrawl_model(engine_model or settings.wabash_default_firecrawl_model)
+    parsed = await client.research_product(
+        manufacturer_name=manufacturer_name,
+        manufacturer_product_number=manufacturer_product_number,
+        model=model,
         attributes=catalog,
     )
     return _normalize_raw(parsed, manufacturer_name, manufacturer_product_number)

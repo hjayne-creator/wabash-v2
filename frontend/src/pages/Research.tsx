@@ -6,6 +6,7 @@ const PROVIDER_LABELS: Record<ResearchEngineProvider, string> = {
   parallel: "Parallel",
   brave: "Brave",
   openai: "OpenAI",
+  firecrawl: "Firecrawl",
 };
 
 const VISIBLE_PERPLEXITY_MODELS = new Set(["preset:pro-search"]);
