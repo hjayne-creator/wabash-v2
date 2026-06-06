@@ -57,12 +57,12 @@ FIRECRAWL_MODEL_OPTIONS: list[dict[str, str]] = [
     {
         "model": "spark-1-mini",
         "display_name": "Firecrawl Agent (spark-1-mini)",
-        "description": "Autonomous web research — cost-effective agent for product attribute extraction",
+        "description": "Agent web research — takes few mins to complete and expensive (> $.25)",
     },
     {
         "model": "spark-1-pro",
-        "display_name": "Firecrawl Agent (spark-1-pro)",
-        "description": "Autonomous web research — higher accuracy for complex product lookups",
+        "display_name": "Firecrawl Agent (spark-1-pro) ",
+        "description": "Agent web research — takes few mins to complete and expensive (> $.50)",
     },
 ]
 
