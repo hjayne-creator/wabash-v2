@@ -16,6 +16,8 @@ export default defineConfig({
         target: process.env.VITE_API_PROXY_TARGET ?? "http://127.0.0.1:8001",
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/api/, ""),
+        // Firecrawl Agent jobs can take several minutes; avoid proxy socket timeouts in dev.
+        timeout: 600_000,
       },
     },
   },

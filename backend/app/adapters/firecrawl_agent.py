@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 FIRECRAWL_AGENT_URL = "https://api.firecrawl.dev/v2/agent"
 VALID_MODELS = frozenset({"spark-1-mini", "spark-1-pro"})
+_TRANSIENT_ERRORS = (httpx.TransportError, httpx.TimeoutException)
 
 
 class FirecrawlAgentError(RuntimeError):
@@ -42,6 +43,17 @@ def _format_http_error(exc: httpx.HTTPStatusError) -> str:
     except Exception:
         pass
     return f"Firecrawl API error ({exc.response.status_code}): {detail or exc.response.reason_phrase}"
+
+
+def _format_transport_error(*, phase: str, exc: Exception) -> str:
+    return (
+        f"Could not reach Firecrawl API during {phase} ({FIRECRAWL_AGENT_URL}): {exc}. "
+        "The agent job may still be running in your Firecrawl dashboard."
+    )
+
+
+def _client_timeout() -> httpx.Timeout:
+    return httpx.Timeout(connect=30.0, read=120.0, write=120.0, pool=30.0)
 
 
 class FirecrawlAgentClient:
@@ -86,8 +98,10 @@ class FirecrawlAgentClient:
             "maxCredits": settings.firecrawl_agent_max_credits,
         }
 
-        job_id = await self._start_agent(body)
-        result_payload = await self._wait_for_result(job_id)
+        async with httpx.AsyncClient(timeout=_client_timeout(), follow_redirects=True) as client:
+            job_id = await self._start_agent(client, body)
+            result_payload = await self._wait_for_result(client, job_id)
+
         data = self._extract_output_content(result_payload)
         self._log_run_cost(model=model, result_payload=result_payload)
         return data
@@ -118,25 +132,26 @@ class FirecrawlAgentClient:
             unit_cost_usd=settings.firecrawl_agent_cost_usd,
         )
 
-    async def _start_agent(self, body: dict[str, Any]) -> str:
+    async def _start_agent(self, client: httpx.AsyncClient, body: dict[str, Any]) -> str:
         async for attempt in AsyncRetrying(
             stop=stop_after_attempt(3),
             wait=wait_exponential(min=1, max=8),
-            retry=retry_if_exception_type((httpx.TransportError, httpx.TimeoutException)),
+            retry=retry_if_exception_type(_TRANSIENT_ERRORS),
             reraise=True,
         ):
             with attempt:
                 try:
-                    async with httpx.AsyncClient(timeout=60.0) as client:
-                        response = await client.post(
-                            FIRECRAWL_AGENT_URL,
-                            headers=self._headers(),
-                            json=body,
-                        )
+                    response = await client.post(
+                        FIRECRAWL_AGENT_URL,
+                        headers=self._headers(),
+                        json=body,
+                    )
                     response.raise_for_status()
                     payload = response.json()
                 except httpx.HTTPStatusError as exc:
                     raise FirecrawlAgentError(_format_http_error(exc)) from exc
+                except _TRANSIENT_ERRORS as exc:
+                    raise FirecrawlAgentError(_format_transport_error(phase="agent start", exc=exc)) from exc
                 except Exception as exc:
                     raise FirecrawlAgentError(str(exc)) from exc
 
@@ -149,24 +164,45 @@ class FirecrawlAgentClient:
 
         raise FirecrawlAgentError("Firecrawl agent start exhausted retries")
 
-    async def _wait_for_result(self, job_id: str) -> dict[str, Any]:
+    async def _wait_for_result(self, client: httpx.AsyncClient, job_id: str) -> dict[str, Any]:
         settings = get_settings()
-        timeout_sec = min(max(settings.max_run_seconds - 15, 120), 3600)
+        agent_timeout_sec = max(settings.max_run_seconds - 15, settings.firecrawl_agent_min_wait_seconds)
+        agent_timeout_sec = min(agent_timeout_sec, 3600)
         poll_interval_sec = settings.firecrawl_agent_poll_interval_sec
+        max_consecutive_failures = settings.firecrawl_agent_poll_retries
         url = f"{FIRECRAWL_AGENT_URL}/{job_id}"
-        deadline = time.monotonic() + timeout_sec
+        deadline = time.monotonic() + agent_timeout_sec
+        consecutive_failures = 0
 
         while True:
             if time.monotonic() >= deadline:
-                raise FirecrawlAgentError(f"Firecrawl agent timed out after {timeout_sec}s")
+                raise FirecrawlAgentError(
+                    f"Firecrawl agent timed out after {agent_timeout_sec}s waiting for job {job_id}. "
+                    "Check the Firecrawl dashboard — the job may still complete there."
+                )
 
             try:
-                async with httpx.AsyncClient(timeout=60.0) as client:
-                    response = await client.get(url, headers=self._headers())
+                response = await client.get(url, headers=self._headers())
                 response.raise_for_status()
                 payload = response.json()
+                consecutive_failures = 0
             except httpx.HTTPStatusError as exc:
                 raise FirecrawlAgentError(_format_http_error(exc)) from exc
+            except _TRANSIENT_ERRORS as exc:
+                consecutive_failures += 1
+                logger.warning(
+                    "Firecrawl agent poll failed for job %s (%s/%s): %s",
+                    job_id,
+                    consecutive_failures,
+                    max_consecutive_failures,
+                    exc,
+                )
+                if consecutive_failures >= max_consecutive_failures:
+                    raise FirecrawlAgentError(
+                        _format_transport_error(phase=f"agent status polling (job {job_id})", exc=exc)
+                    ) from exc
+                await asyncio.sleep(poll_interval_sec)
+                continue
             except Exception as exc:
                 raise FirecrawlAgentError(str(exc)) from exc
 

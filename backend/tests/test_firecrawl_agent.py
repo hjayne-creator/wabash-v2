@@ -1,10 +1,11 @@
 import json
 
+import httpx
 import pytest
 import respx
 from httpx import Response
 
-from app.adapters.firecrawl_agent import FirecrawlAgentClient, normalize_firecrawl_model
+from app.adapters.firecrawl_agent import FirecrawlAgentClient, FirecrawlAgentError, normalize_firecrawl_model
 from app.config import get_settings
 from app.models.db import ProductAttribute, init_db
 from app.research.attribute_researcher import run_attribute_research
@@ -93,27 +94,28 @@ async def test_firecrawl_research_run_persists(monkeypatch, tmp_path):
 @pytest.mark.asyncio
 async def test_firecrawl_client_research_product():
     job_id = "22222222-2222-2222-2222-222222222222"
+    completed_payload = {
+        "success": True,
+        "status": "completed",
+        "creditsUsed": 8,
+        "data": json.dumps(
+            {
+                "product_found": True,
+                "manufacturer_name": "ACME",
+                "manufacturer_product_number": "X1",
+                "attributes": {"Weight": "5 lb"},
+                "sources": [],
+            }
+        ),
+    }
     start_route = respx.post("https://api.firecrawl.dev/v2/agent").mock(
         return_value=Response(200, json={"success": True, "id": job_id})
     )
     status_route = respx.get(f"https://api.firecrawl.dev/v2/agent/{job_id}").mock(
-        return_value=Response(
-            200,
-            json={
-                "success": True,
-                "status": "completed",
-                "creditsUsed": 8,
-                "data": json.dumps(
-                    {
-                        "product_found": True,
-                        "manufacturer_name": "ACME",
-                        "manufacturer_product_number": "X1",
-                        "attributes": {"Weight": "5 lb"},
-                        "sources": [],
-                    }
-                ),
-            },
-        )
+        side_effect=[
+            httpx.ConnectError("All connection attempts failed"),
+            Response(200, json=completed_payload),
+        ]
     )
 
     client = FirecrawlAgentClient(api_key="test-key")
@@ -126,4 +128,29 @@ async def test_firecrawl_client_research_product():
 
     assert result["product_found"] is True
     assert start_route.called
-    assert status_route.called
+    assert status_route.call_count == 2
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_firecrawl_client_poll_retries_then_fail(monkeypatch):
+    monkeypatch.setenv("FIRECRAWL_AGENT_POLL_RETRIES", "2")
+    get_settings.cache_clear()
+
+    job_id = "33333333-3333-3333-3333-333333333333"
+    respx.post("https://api.firecrawl.dev/v2/agent").mock(
+        return_value=Response(200, json={"success": True, "id": job_id})
+    )
+    respx.get(f"https://api.firecrawl.dev/v2/agent/{job_id}").mock(
+        side_effect=httpx.ConnectError("All connection attempts failed")
+    )
+
+    client = FirecrawlAgentClient(api_key="test-key")
+    with pytest.raises(FirecrawlAgentError, match="status polling"):
+        await client.research_product(
+            manufacturer_name="ACME",
+            manufacturer_product_number="X1",
+            model="spark-1-mini",
+            attributes=[],
+        )
+    get_settings.cache_clear()

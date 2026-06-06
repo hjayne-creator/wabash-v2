@@ -129,6 +129,16 @@ class Settings(BaseSettings):
         ge=2,
         validation_alias=AliasChoices("FIRECRAWL_AGENT_POLL_INTERVAL_SEC"),
     )
+    firecrawl_agent_poll_retries: int = Field(
+        default=12,
+        ge=1,
+        validation_alias=AliasChoices("FIRECRAWL_AGENT_POLL_RETRIES"),
+    )
+    firecrawl_agent_min_wait_seconds: int = Field(
+        default=600,
+        ge=120,
+        validation_alias=AliasChoices("FIRECRAWL_AGENT_MIN_WAIT_SECONDS"),
+    )
     max_run_seconds: int = Field(default=300, ge=30)
     attribute_fuzzy_threshold: int = Field(default=90, ge=70, le=100)
 
