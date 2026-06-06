@@ -48,6 +48,7 @@ async def test_firecrawl_research_run_persists(monkeypatch, tmp_path):
     db_path = tmp_path / "test.db"
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setenv("FIRECRAWL_API_KEY", "test-key")
+    monkeypatch.setenv("FIRECRAWL_USD_PER_CREDIT", "0.004")
     monkeypatch.setenv("FIRECRAWL_AGENT_POLL_INTERVAL_SEC", "2")
     get_settings.cache_clear()
     init_db()
@@ -62,7 +63,7 @@ async def test_firecrawl_research_run_persists(monkeypatch, tmp_path):
             json={
                 "success": True,
                 "status": "completed",
-                "creditsUsed": 12,
+                "creditsUsed": 150,
                 "data": {
                     "product_found": True,
                     "manufacturer_name": "WHITING DOOR",
@@ -85,6 +86,7 @@ async def test_firecrawl_research_run_persists(monkeypatch, tmp_path):
     assert run.status in ("complete", "partial")
     assert run.attributes_filled >= 1
     assert run.fill_pct > 0
+    assert run.total_cost_usd == pytest.approx(0.6)
 
 
 @respx.mock

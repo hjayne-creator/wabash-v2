@@ -72,6 +72,7 @@ def build_cost_report(collector: RunUsageCollector) -> tuple[list[CostLineItem],
                 phase=item.phase,
                 service=item.service,
                 units=item.units,
+                unit_cost_usd=round(item.unit_cost_usd, 6),
                 total_cost_usd=round(item.total_cost_usd, 6),
             )
         )

@@ -89,24 +89,34 @@ class FirecrawlAgentClient:
         job_id = await self._start_agent(body)
         result_payload = await self._wait_for_result(job_id)
         data = self._extract_output_content(result_payload)
+        self._log_run_cost(model=model, result_payload=result_payload)
+        return data
 
-        credits_used = result_payload.get("creditsUsed")
-        if isinstance(credits_used, (int, float)) and credits_used > 0:
+    @staticmethod
+    def _extract_credits_used(result_payload: dict[str, Any]) -> int | None:
+        for key in ("creditsUsed", "credits_used"):
+            value = result_payload.get(key)
+            if isinstance(value, (int, float)) and value > 0:
+                return int(value)
+        return None
+
+    def _log_run_cost(self, *, model: str, result_payload: dict[str, Any]) -> None:
+        settings = get_settings()
+        credits_used = self._extract_credits_used(result_payload)
+        if credits_used is not None:
             log_external_cost(
                 service="firecrawl",
                 phase=f"agent-{model}",
-                units=int(credits_used),
+                units=credits_used,
                 unit_cost_usd=settings.firecrawl_usd_per_credit,
             )
-        else:
-            log_external_cost(
-                service="firecrawl",
-                phase=f"agent-{model}",
-                units=1,
-                unit_cost_usd=settings.firecrawl_agent_cost_usd,
-            )
-
-        return data
+            return
+        log_external_cost(
+            service="firecrawl",
+            phase=f"agent-{model}",
+            units=1,
+            unit_cost_usd=settings.firecrawl_agent_cost_usd,
+        )
 
     async def _start_agent(self, body: dict[str, Any]) -> str:
         async for attempt in AsyncRetrying(

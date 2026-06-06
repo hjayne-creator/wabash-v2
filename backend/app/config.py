@@ -116,7 +116,7 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("FIRECRAWL_AGENT_COST_USD"),
     )
     firecrawl_usd_per_credit: float = Field(
-        default=0.002,
+        default=0.004,
         validation_alias=AliasChoices("FIRECRAWL_USD_PER_CREDIT"),
     )
     firecrawl_agent_max_credits: int = Field(

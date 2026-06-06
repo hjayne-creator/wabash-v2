@@ -5,6 +5,18 @@ type Props = {
   onDismiss: () => void;
 };
 
+function formatRunCost(result: ResearchRunResponse): string {
+  const firecrawlLine = result.cost_lines.find((line) => line.service === "firecrawl");
+  if (firecrawlLine?.units && firecrawlLine.units > 0) {
+    const rate =
+      firecrawlLine.unit_cost_usd ??
+      (firecrawlLine.total_cost_usd ? firecrawlLine.total_cost_usd / firecrawlLine.units : 0);
+    const total = firecrawlLine.total_cost_usd ?? rate * firecrawlLine.units;
+    return `${firecrawlLine.units} credits × $${rate.toFixed(4)} = $${total.toFixed(4)}`;
+  }
+  return `$${result.total_cost_usd.toFixed(4)}`;
+}
+
 export function ResearchResults({ result, onDismiss }: Props) {
   const mappedRows = Object.values(result.mapped);
 
@@ -15,7 +27,7 @@ export function ResearchResults({ result, onDismiss }: Props) {
           <h3 id="report-results-title">Research results</h3>
           <p className="muted small">
             Run #{result.id} · {result.status} · Fill {result.fill_pct}% ({result.attributes_filled}/
-            {result.attributes_total}) · ${result.total_cost_usd.toFixed(4)}
+            {result.attributes_total}) · {formatRunCost(result)}
           </p>
         </div>
         <button type="button" className="secondary" onClick={onDismiss}>

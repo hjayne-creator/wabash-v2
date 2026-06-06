@@ -31,6 +31,8 @@ export type CostLine = {
   service?: string | null;
   model?: string | null;
   total_cost_usd?: number;
+  units?: number | null;
+  unit_cost_usd?: number | null;
 };
 
 export type RuntimeLine = { phase: string; duration_ms: number };

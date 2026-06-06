@@ -17,6 +17,7 @@ class CostLineItem(BaseModel):
     output_cost_usd: float = 0.0
     total_cost_usd: float = 0.0
     units: int | None = None
+    unit_cost_usd: float | None = None
 
 
 class RuntimeLineItem(BaseModel):
