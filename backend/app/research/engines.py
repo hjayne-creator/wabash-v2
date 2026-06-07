@@ -8,27 +8,12 @@ PERPLEXITY_MODEL_OPTIONS: list[dict[str, str]] = [
     {
         "model": "preset:pro-search",
         "display_name": "Perplexity Pro Search",
-        "description": "Default — Perplexity preset with built-in web search",
-    },
-    {
-        "model": "preset:fast-search",
-        "display_name": "Perplexity Fast Search",
-        "description": "Faster, lighter web search preset",
+        "description": "Real-time web search: ($0.02) - Best Results",
     },
     {
         "model": "openai/gpt-5-mini",
         "display_name": "OpenAI GPT-5 Mini",
-        "description": "Fast, cost-effective web research",
-    },
-    {
-        "model": "openai/gpt-5.4-mini",
-        "display_name": "OpenAI GPT-5.4 Mini",
-        "description": "Newer mini model via Perplexity Agent",
-    },
-    {
-        "model": "openai/gpt-5.4-nano",
-        "display_name": "OpenAI GPT-5.4 Nano",
-        "description": "Lowest-cost OpenAI model on Perplexity",
+        "description": "Training data + web search: ($0.01)",
     },
 ]
 
@@ -36,12 +21,12 @@ OPENAI_MODEL_OPTIONS: list[dict[str, str]] = [
     {
         "model": "gpt-4o-mini",
         "display_name": "GPT-4o Mini",
-        "description": "OpenAI Responses API with built-in web search — fast, cost-effective attribute research",
+        "description": "Training data + web search: ($0.01)",
     },
     {
         "model": "gpt-5-mini-2025-08-07",
         "display_name": "GPT-5 Mini",
-        "description": "OpenAI Responses API with built-in web search — newer mini model with stronger reasoning",
+        "description": "Training data + web search: ($0.01)",
     },
 ]
 
@@ -49,7 +34,7 @@ BRAVE_MODEL_OPTIONS: list[dict[str, str]] = [
     {
         "model": "brave",
         "display_name": "Brave Answers",
-        "description": "Single web search with grounded answers",
+        "description": "Basic web search ($0.004)",
     },
 ]
 
