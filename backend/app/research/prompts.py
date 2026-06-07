@@ -61,6 +61,70 @@ def build_openai_research_instructions() -> str:
     return build_research_instructions()
 
 
+def build_openai_research_schema() -> dict[str, object]:
+    """JSON schema for OpenAI Responses API structured output."""
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "product_found": {
+                "type": "boolean",
+                "description": (
+                    "True if a matching product was identified from authoritative sources; "
+                    "otherwise false."
+                ),
+            },
+            "manufacturer_name": {"type": "string"},
+            "manufacturer_product_number": {"type": "string"},
+            "attributes": {
+                "type": "object",
+                "description": (
+                    "Discovered product specifications keyed by attribute label. "
+                    "Use empty string when a value is not found."
+                ),
+                "additionalProperties": {"type": "string"},
+            },
+            "sources": {
+                "type": "array",
+                "description": "URLs used as evidence, prefer manufacturer and datasheet pages.",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "url": {"type": "string"},
+                        "title": {"type": "string"},
+                    },
+                    "required": ["url", "title"],
+                },
+            },
+            "notes": {
+                "type": ["string", "null"],
+                "description": "Optional caveats, conflicts, or gaps in the research.",
+            },
+        },
+        "required": [
+            "product_found",
+            "manufacturer_name",
+            "manufacturer_product_number",
+            "attributes",
+            "sources",
+            "notes",
+        ],
+    }
+
+
+def build_openai_research_output_format() -> dict[str, object]:
+    """Responses API `text` payload enforcing JSON output shape."""
+    return {
+        "format": {
+            "type": "json_schema",
+            "name": "attribute_research",
+            "strict": False,
+            "schema": build_openai_research_schema(),
+        }
+    }
+
+
 def build_parallel_instructions() -> str:
     """Behavioral instructions for Parallel; output shape is enforced by task_spec."""
     return "\n".join(

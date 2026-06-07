@@ -8,6 +8,7 @@ from tenacity import AsyncRetrying, retry_if_exception_type, stop_after_attempt,
 
 from app.config import get_settings
 from app.observability.run_usage import log_external_cost, log_llm_usage, monotonic_ms
+from app.research.prompts import build_openai_research_output_format
 
 DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
 WEB_SEARCH_TOOL: dict[str, str] = {"type": "web_search"}
@@ -104,6 +105,7 @@ class OpenAIResearchClient:
                         input=input_text,
                         tools=[WEB_SEARCH_TOOL],
                         tool_choice="required",
+                        text=build_openai_research_output_format(),
                         max_output_tokens=4096,
                     )
                 except Exception as exc:

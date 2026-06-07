@@ -90,5 +90,7 @@ async def test_openai_research_uses_responses_api_with_web_search():
     assert kwargs["model"] == "gpt-4o-mini"
     assert kwargs["tools"] == [{"type": "web_search"}]
     assert kwargs["tool_choice"] == "required"
+    assert kwargs["text"]["format"]["type"] == "json_schema"
+    assert kwargs["text"]["format"]["name"] == "attribute_research"
     assert kwargs["instructions"] == "Return JSON only."
     assert kwargs["input"] == "Find PEWAG H4247SC specs."
