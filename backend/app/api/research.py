@@ -15,8 +15,10 @@ from app.models.schemas import (
     RuntimeLineItem,
     parse_stored_json,
 )
+from app.research.attribute_matcher import load_active_attributes
 from app.research.attribute_researcher import run_attribute_research
 from app.research.engines import list_research_engines
+from app.research.prompts import build_engine_research_display
 
 router = APIRouter()
 
@@ -29,6 +31,20 @@ def _run_to_response(run: ResearchRun) -> ResearchRunResponse:
     if not isinstance(cost_lines, list):
         cost_lines = []
 
+    research_query = raw.get("research_query") if isinstance(raw.get("research_query"), str) else None
+    research_prompt = raw.get("research_prompt") if isinstance(raw.get("research_prompt"), str) else None
+    if not research_query or not research_prompt:
+        with Session(get_engine()) as session:
+            catalog = load_active_attributes(session)
+        fallback_query, fallback_prompt = build_engine_research_display(
+            engine_provider=run.engine_provider,
+            manufacturer_name=run.manufacturer_name,
+            manufacturer_product_number=run.manufacturer_product_number,
+            attributes=catalog,
+        )
+        research_query = research_query or fallback_query
+        research_prompt = research_prompt or fallback_prompt
+
     return ResearchRunResponse(
         id=run.id or 0,
         status=run.status,  # type: ignore[arg-type]
@@ -37,6 +53,8 @@ def _run_to_response(run: ResearchRun) -> ResearchRunResponse:
         manufacturer_product_number=run.manufacturer_product_number,
         engine_provider=run.engine_provider,
         engine_model=run.engine_model,
+        research_query=research_query,
+        research_prompt=research_prompt,
         product_found=bool(raw.get("product_found", False)),
         raw_output=raw if isinstance(raw, dict) else {},
         mapped=mapped_raw,

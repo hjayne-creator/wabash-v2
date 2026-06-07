@@ -23,6 +23,7 @@ from app.research.attribute_matcher import load_active_attributes, match_attribu
 from app.research.json_utils import parse_json_object
 from app.research.prompts import (
     build_brave_research_message,
+    build_engine_research_display,
     build_openai_research_instructions,
     build_research_input,
     build_research_instructions,
@@ -58,6 +59,13 @@ async def run_attribute_research(
 
     with Session(get_engine()) as session:
         catalog = load_active_attributes(session)
+
+    research_query, research_prompt = build_engine_research_display(
+        engine_provider=engine_provider,
+        manufacturer_name=manufacturer_name,
+        manufacturer_product_number=manufacturer_product_number,
+        attributes=catalog,
+    )
 
     with run_tracking() as (collector, timer):
         timer.start_phase("research")
@@ -119,6 +127,9 @@ async def run_attribute_research(
             raw = {"product_found": False, "attributes": {}, "sources": [], "notes": error_message}
         finally:
             timer.end_phase()
+
+        raw["research_query"] = research_query
+        raw["research_prompt"] = research_prompt
 
         if not raw.get("product_found", True) and status == "complete":
             status = "no_product"

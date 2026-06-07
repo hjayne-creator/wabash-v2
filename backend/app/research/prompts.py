@@ -1,6 +1,8 @@
 """Prompt builders for attribute research."""
 from __future__ import annotations
 
+import json
+
 from app.models.db import ProductAttribute
 
 _RESEARCH_JSON_SCHEMA_EXAMPLE = """{
@@ -173,6 +175,46 @@ def _parallel_attributes_object_schema(
         "additionalProperties": False,
         "properties": properties,
     }
+
+
+def build_engine_research_display(
+    *,
+    engine_provider: str,
+    manufacturer_name: str,
+    manufacturer_product_number: str,
+    attributes: list[ProductAttribute] | None = None,
+) -> tuple[str, str]:
+    """Return (search query, full prompt) sent to the research engine."""
+    catalog = attributes or []
+    query = build_research_input(
+        manufacturer_name=manufacturer_name,
+        manufacturer_product_number=manufacturer_product_number,
+    )
+    if engine_provider == "brave":
+        prompt = build_brave_research_message(
+            manufacturer_name=manufacturer_name,
+            manufacturer_product_number=manufacturer_product_number,
+        )
+    elif engine_provider == "parallel":
+        task_input = build_parallel_task_input(
+            manufacturer_name=manufacturer_name,
+            manufacturer_product_number=manufacturer_product_number,
+            attributes=catalog,
+        )
+        prompt = json.dumps(task_input, indent=2)
+    elif engine_provider == "firecrawl":
+        prompt = build_firecrawl_agent_prompt(
+            manufacturer_name=manufacturer_name,
+            manufacturer_product_number=manufacturer_product_number,
+            attributes=catalog,
+        )
+    elif engine_provider == "openai":
+        instructions = build_openai_research_instructions()
+        prompt = f"{instructions}\n\n--- User input ---\n\n{query}"
+    else:
+        instructions = build_research_instructions()
+        prompt = f"{instructions}\n\n--- User input ---\n\n{query}"
+    return query, prompt
 
 
 def build_firecrawl_agent_prompt(

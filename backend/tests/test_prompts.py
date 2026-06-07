@@ -1,5 +1,6 @@
 from app.research.prompts import (
     build_brave_research_message,
+    build_engine_research_display,
     build_openai_research_instructions,
     build_parallel_instructions,
     build_research_input,
@@ -32,6 +33,29 @@ def test_parallel_instructions_skip_redundant_schema():
     assert "# Role and Objective" in instructions
     assert "output schema" in instructions.lower()
     assert "```json" not in instructions
+
+
+def test_engine_research_display_includes_query_for_each_provider():
+    query, prompt = build_engine_research_display(
+        engine_provider="perplexity",
+        manufacturer_name="PEWAG",
+        manufacturer_product_number="H4247SC",
+    )
+    assert "PEWAG" in query
+    assert "H4247SC" in query
+    assert query in prompt
+    assert "# Role and Objective" in prompt
+
+    brave_query, brave_prompt = build_engine_research_display(
+        engine_provider="brave",
+        manufacturer_name="PEWAG",
+        manufacturer_product_number="H4247SC",
+    )
+    assert brave_query == query
+    assert brave_prompt == build_brave_research_message(
+        manufacturer_name="PEWAG",
+        manufacturer_product_number="H4247SC",
+    )
 
 
 def test_brave_message_leads_with_user_query():

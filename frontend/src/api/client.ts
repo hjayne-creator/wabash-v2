@@ -63,6 +63,8 @@ export type ResearchRunResponse = {
   manufacturer_product_number: string;
   engine_provider: string;
   engine_model: string;
+  research_query?: string | null;
+  research_prompt?: string | null;
   product_found: boolean;
   raw_output: Record<string, unknown>;
   mapped: Record<string, MappedAttribute>;

@@ -38,6 +38,20 @@ export function ResearchResults({ result, onDismiss }: Props) {
       {result.message ? <p className="small">{result.message}</p> : null}
       {result.error_message ? <p className="small bad-text">{result.error_message}</p> : null}
 
+      {result.research_query ? (
+        <>
+          <h4>Search query</h4>
+          <pre className="step-output-pre">{result.research_query}</pre>
+        </>
+      ) : null}
+
+      {result.research_prompt && result.research_prompt !== result.research_query ? (
+        <details className="step-output-details" style={{ marginTop: 12 }}>
+          <summary>Full research prompt</summary>
+          <pre className="step-output-pre">{result.research_prompt}</pre>
+        </details>
+      ) : null}
+
       <h4>Mapped attributes</h4>
       {mappedRows.length === 0 ? (
         <p className="muted small">No mapped attributes.</p>

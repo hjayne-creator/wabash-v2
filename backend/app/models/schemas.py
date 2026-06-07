@@ -56,6 +56,8 @@ class ResearchRunResponse(BaseModel):
     manufacturer_product_number: str
     engine_provider: str
     engine_model: str
+    research_query: str | None = None
+    research_prompt: str | None = None
     product_found: bool
     raw_output: dict[str, Any] = Field(default_factory=dict)
     mapped: dict[str, MappedAttributeOut] = Field(default_factory=dict)

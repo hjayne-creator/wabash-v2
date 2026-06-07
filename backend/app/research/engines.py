@@ -141,10 +141,10 @@ def list_research_engines() -> list[dict]:
         {
             "provider": "parallel",
             "model": parallel_model,
-            "display_name": "Parallel Task API",
+            "display_name": "Parallel Task",
             "description": (
-                f"Parallel Task API ({settings.parallel_task_processor} processor) — "
-                "web research with structured JSON output"
+                f"Parallel Task ({settings.parallel_task_processor} processor) — "
+                "Thorough web research: ($0.025)"
             ),
             "is_default": settings.wabash_default_research_engine == "parallel",
         }
